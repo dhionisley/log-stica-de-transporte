@@ -1,0 +1,14 @@
+{
+  "name": "transport-platform",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev:api": "pnpm --filter @transport/api dev",
+    "build:api": "pnpm --filter @transport/api build",
+    "lint:api": "pnpm --filter @transport/api lint",
+    "test:api": "pnpm --filter @transport/api test",
+    "test:integration": "pnpm --filter @transport/api test:integration",
+    "db:migrate": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f infrastructure/migrations/0001_foundation.sql"
+  }
+}

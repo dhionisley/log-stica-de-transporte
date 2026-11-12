@@ -1,0 +1,60 @@
+schema: spec-driven
+
+context: |
+  Plataforma SaaS multitenant de transporte de pessoas.
+  A arquitetura aprovada está documentada nos artefatos da raiz do workspace e não pode ser alterada silenciosamente.
+  Stack confirmada: NestJS/TypeScript, Next.js/React, Flutter/Dart, PostgreSQL/PostGIS, Redis, BullMQ com Transactional Outbox, WebSocket, SQLite/Drift, Python para otimização, storage S3-compatible, OpenTelemetry, Docker/OCI, Terraform/OpenTofu e monorepo Nx/pnpm.
+  O backend começa como modular monolith; o domínio não depende de frameworks ou SDKs de providers.
+  Toda mudança tenant-scoped exige isolamento testado; operações críticas exigem autorização server-side, auditoria e idempotência quando repetíveis.
+  Mobile operacional é offline-first. Realtime complementa persistência. Tracking só existe em contexto operacional autorizado.
+  O otimizador recomenda e o humano aprova mudanças operacionais materiais.
+  A comunicação e os artefatos do projeto devem ser escritos em português.
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+# Example:
+#   context: |
+#     Designs and tasks must cover Windows, macOS, and Linux
+#     Write all artifacts in Spanish
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Declarar explicitamente o que fica fora do escopo.
+    - Identificar os documentos arquiteturais afetados e confirmar que não há mudança silenciosa.
+  design:
+    - Preservar as dependency rules e os ports/adapters definidos na arquitetura.
+    - Explicitar isolamento multitenant, segurança, observabilidade e estratégia de testes quando aplicáveis.
+  tasks:
+    - Dividir a implementação em mudanças pequenas, verificáveis e reversíveis quando possível.
+    - Incluir build, testes automatizados e verificações manuais pertinentes.
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
+operations:
+  apply:
+    guidance:
+      - Implementar somente tarefas aprovadas e registrar divergências sem ampliar o escopo.
+      - Não instalar dependências novas sem explicar necessidade e impacto.
+  archive:
+    guidance:
+      - Não arquivar enquanto houver critérios de aceite não verificados.
