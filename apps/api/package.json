@@ -5,6 +5,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "lint": "eslint src test",
+    "db:migrate": "node dist/tooling/migrate.js",
     "start": "node dist/main.js",
     "test": "jest --runInBand",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand"

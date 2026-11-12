@@ -42,8 +42,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
-      - name: Aplicar migration em banco limpo
-        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f infrastructure/migrations/0001_foundation.sql
+      - run: pnpm build:api
+      - name: Aplicar migrations via runner
+        run: DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
       - run: pnpm test:integration
 
   security:

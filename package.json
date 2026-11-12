@@ -9,6 +9,6 @@
     "lint:api": "pnpm --filter @transport/api lint",
     "test:api": "pnpm --filter @transport/api test",
     "test:integration": "pnpm --filter @transport/api test:integration",
-    "db:migrate": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f infrastructure/migrations/0001_foundation.sql"
+    "db:migrate": "pnpm --filter @transport/api db:migrate"
   }
 }

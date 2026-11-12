@@ -10,18 +10,18 @@
 
 - [x] 2.1 Separar o workflow em jobs `quality`, `integration` e `security`.
 - [x] 2.2 Configurar services PostgreSQL/PostGIS e Redis com healthcheck no job de integração.
-- [ ] 2.3 Aplicar `0001_foundation.sql` em banco limpo e executar `test:integration`; verificar localmente o mesmo fluxo contra o Docker Compose.
+- [x] 2.3 Aplicar `0001_foundation.sql` em banco limpo e executar `test:integration`; verificar localmente o mesmo fluxo contra o Docker Compose.
 
 ## 3. Segurança
 
 - [x] 3.1 Adicionar SCA com `pnpm audit --audit-level high` e verificar resultado atual.
-- [ ] 3.2 Adicionar secret scan (gitleaks) e verificar que não expõe valores nos logs.
+- [x] 3.2 Adicionar secret scan (gitleaks) e verificar que não expõe valores nos logs.
 - [x] 3.3 Adicionar CodeQL para JavaScript/TypeScript.
 
 ## 4. Verificação
 
-- [ ] 4.1 Validar o workflow (sintaxe YAML) e executar build, unit e integração locais sem regressões.
-- [ ] 4.2 Atualizar `docs/ETAPA-10-STATUS.md` e validar OpenSpec em modo estrito.
+- [x] 4.1 Validar o workflow (sintaxe YAML) e executar build, unit e integração locais sem regressões.
+- [x] 4.2 Atualizar `docs/ETAPA-10-STATUS.md` e validar OpenSpec em modo estrito.
 
 ## Workflow follow-up
 

@@ -6,23 +6,23 @@ Bootstrap executável da plataforma SaaS multitenant de transporte.
 - Node.js LTS
 - pnpm 10
 - Docker + Compose
-- PostgreSQL client (`psql`) apenas para o script `pnpm db:migrate`; em desenvolvimento local ele também pode ser executado dentro do container
+- Runner de migrations SQL versionadas em Node.js incluído no projeto (não requer psql instalado no host)
 
 ## Subir infraestrutura
 ```bash
 docker compose up -d
 cp .env.example .env
 export DATABASE_URL=postgresql://transport:transport@localhost:5432/transport
+pnpm build:api
 pnpm db:migrate
-pnpm install
 pnpm dev:api
 ```
 
-No PowerShell, a migration pode ser aplicada sem instalar `psql` no Windows:
+No PowerShell (Windows), o comando `pnpm db:migrate` funciona diretamente sem necessidade de instalar cliente PostgreSQL:
 
 ```powershell
-Get-Content -Raw infrastructure/migrations/0001_foundation.sql |
-  docker compose exec -T postgres psql -U transport -d transport -v ON_ERROR_STOP=1
+$env:DATABASE_URL="postgresql://transport:transport@localhost:5432/transport"
+pnpm db:migrate
 ```
 
 O teste RLS exige a role não proprietária de teste:

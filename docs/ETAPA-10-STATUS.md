@@ -91,3 +91,15 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - ESLint 9 + typescript-eslint adicionados como devDependencies de apps/api; lint sem erros;
 - verificado localmente em 2026-11-12: lint, build, 18 testes unitarios, 8 de integracao e pnpm audit (sem severidade alta/critica; 1 baixa e 5 moderadas);
 - pendente: execucao do CI remoto no GitHub (gitleaks e CodeQL so rodam la) e scan de container/IaC, fora do escopo ate existir Dockerfile/IaC.
+
+- CI remoto verificado em 2026-11-12 no GitHub Actions (commit 0911a18): quality, integration (migration em banco limpo + 8 testes) e security (audit, gitleaks sem vazamentos, CodeQL) aprovados;
+- avisos nao bloqueantes: Node 20 nas actions, codeql-action@v3 sera descontinuado em dez/2026 e migracao do ubuntu-latest.
+
+## Database migrations runner M0
+
+- runner portavel em Node.js (sem dependencia de psql no host) implementado em apps/api/src/tooling;
+- controle por tabela platform.schema_migrations com checksum SHA-256 e advisory lock exclusivo;
+- suporte a adocao automatica de schemas legados (0001 adotada com sucesso no banco local);
+- rollback e protecao contra migrations corrompidas comprovados por testes de integracao;
+- script db:migrate e job de integracao do CI atualizados para usar o novo runner;
+- 6 suites e 28 testes unitarios + 2 suites e 13 testes de integracao aprovados.
