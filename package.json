@@ -13,5 +13,10 @@
     "test:api": "pnpm --filter @transport/api test",
     "test:integration": "pnpm --filter @transport/api test:integration",
     "db:migrate": "pnpm --filter @transport/api db:migrate"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "^8.5.18"
+    }
   }
 }
