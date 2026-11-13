@@ -16,7 +16,7 @@
 
 - [x] 3.1 Atualizar `.github/workflows/ci.yml` para incluir build e lint da aplicação Web no job `quality`.
 - [x] 3.2 Executar build e testes locais de todos os pacotes sem regressões.
-- [ ] 3.3 Confirmar pipeline CI verde no GitHub Actions, validar OpenSpec em modo estrito e atualizar `docs/ETAPA-10-STATUS.md`.
+- [x] 3.3 Confirmar pipeline CI verde no GitHub Actions, validar OpenSpec em modo estrito e atualizar `docs/ETAPA-10-STATUS.md`.
 
 ## Workflow follow-up
 

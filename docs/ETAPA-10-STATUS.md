@@ -123,3 +123,5 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - projetos mobile Flutter canônicos criados em apps/driver-mobile e apps/passenger-mobile (pubspec.yaml, analysis_options.yaml e lib/main.dart);
 - build:web e lint:web validados com sucesso e integrados ao job quality do CI;
 - API NestJS permanece 100% integra com 35 testes unitarios aprovados sem regressoes.
+
+- CI remoto verificado em 2026-11-13 no GitHub Actions (commit e6a062a): quality (lint:api, lint:web, build:api, build:web, 35 testes unitarios), integration (novo runner de migrations em banco limpo, 13 testes de integracao) e security (SCA sem vulnerabilidades altas/criticas, gitleaks, CodeQL) todos aprovados (success).
