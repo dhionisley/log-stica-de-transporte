@@ -58,11 +58,17 @@ describe('MigrationRunner Integration', () => {
     expect(result.appliedCount).toBeGreaterThanOrEqual(1);
     expect(result.appliedMigrations).toContain('0001_foundation.sql');
 
+    const expectedFiles = fs
+      .readdirSync(realMigrationsDir)
+      .filter((f) => f.endsWith('.sql'));
+
     const checkRes = await testPool.query<{ name: string; checksum: string }>(
       'SELECT name, checksum FROM platform.schema_migrations ORDER BY name',
     );
-    expect(checkRes.rows).toHaveLength(1);
-    expect(checkRes.rows[0].name).toBe('0001_foundation.sql');
+    expect(checkRes.rows).toHaveLength(expectedFiles.length);
+
+    const appliedNames = checkRes.rows.map((r) => r.name);
+    expect(appliedNames).toContain('0001_foundation.sql');
 
     const expectedChecksum = calculateChecksum(
       fs.readFileSync(path.join(realMigrationsDir, '0001_foundation.sql'), 'utf8'),
@@ -154,13 +160,16 @@ describe('MigrationRunner Integration', () => {
       connectionString: getDbUrlForDatabase(adoptionDb),
     });
 
+    const adoptionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'adoption-test-'));
+
     try {
-      // Simula banco migrado manualmente antes do runner existir
+      // Simula banco migrado manualmente antes do runner existir (apenas 0001)
       const origSql = fs.readFileSync(
         path.join(realMigrationsDir, '0001_foundation.sql'),
         'utf8',
       );
       await adoptionPool.query(origSql);
+      fs.writeFileSync(path.join(adoptionDir, '0001_foundation.sql'), origSql);
 
       // Executa o runner
       const runner = new MigrationRunner(adoptionPool, {
@@ -169,7 +178,7 @@ describe('MigrationRunner Integration', () => {
         error: () => undefined,
       });
 
-      const result = await runner.run(realMigrationsDir);
+      const result = await runner.run(adoptionDir);
       expect(result.adoptedMigrations).toContain('0001_foundation.sql');
       expect(result.appliedCount).toBe(0);
 
@@ -180,6 +189,7 @@ describe('MigrationRunner Integration', () => {
       );
       expect(record.rows).toHaveLength(1);
     } finally {
+      fs.rmSync(adoptionDir, { recursive: true, force: true });
       await adoptionPool.end();
       await adminPool.query(`
         SELECT pg_terminate_backend(pid)
