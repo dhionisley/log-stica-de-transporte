@@ -64,6 +64,7 @@ export class TenantManagementService {
         defaultTimezone: dto.defaultTimezone,
       });
 
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenant.id]);
       await this.tenantRepository.save(client, tenant);
 
       // 1. Gravar evento no Transactional Outbox
@@ -88,7 +89,7 @@ export class TenantManagementService {
       await client.query(
         `INSERT INTO audit.audit_records (
            tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenant.id,
           'SYSTEM',
@@ -159,12 +160,13 @@ export class TenantManagementService {
         throw new TenantNotFoundError(tenantId);
       }
 
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenant.id]);
       await this.tenantRepository.setSetting(client, tenantId, key, value);
 
       await client.query(
         `INSERT INTO audit.audit_records (
            tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenant.id,
           'SYSTEM',
@@ -201,6 +203,8 @@ export class TenantManagementService {
         throw new TenantNotFoundError(tenantId);
       }
 
+      await client.query("SELECT set_config('app.tenant_id', $1, true)", [tenant.id]);
+
       const previousStatus = tenant.status;
       transitionFn(tenant);
 
@@ -226,7 +230,7 @@ export class TenantManagementService {
       await client.query(
         `INSERT INTO audit.audit_records (
            tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenant.id,
           'SYSTEM',

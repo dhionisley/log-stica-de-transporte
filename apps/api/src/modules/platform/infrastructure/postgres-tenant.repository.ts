@@ -95,7 +95,7 @@ export class PostgresTenantRepository implements TenantRepository {
   async setSetting(client: PoolClient, tenantId: string, key: string, value: unknown): Promise<void> {
     await client.query(
       `INSERT INTO platform.tenant_settings (tenant_id, setting_key, setting_value, updated_at)
-       VALUES ($1, $2, $3, now())
+       VALUES ($1, $2, $3::jsonb, now())
        ON CONFLICT (tenant_id, setting_key) DO UPDATE SET
          setting_value = EXCLUDED.setting_value,
          version = platform.tenant_settings.version + 1,
