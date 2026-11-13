@@ -125,3 +125,11 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - API NestJS permanece 100% integra com 35 testes unitarios aprovados sem regressoes.
 
 - CI remoto verificado em 2026-11-13 no GitHub Actions (commit e6a062a): quality (lint:api, lint:web, build:api, build:web, 35 testes unitarios), integration (novo runner de migrations em banco limpo, 13 testes de integracao) e security (SCA sem vulnerabilidades altas/criticas, gitleaks, CodeQL) todos aprovados (success).
+
+## Tenant Lifecycle & Control Plane (M1 Incremento 1)
+
+- migration 0002_tenant_lifecycle.sql adicionada com platform.tenant_settings e platform.tenant_branding com RLS;
+- agregado Tenant implementado com maquina de estados (PROVISIONED -> ACTIVE -> SUSPENDED -> TERMINATED);
+- TenantManagementService orquestra ciclo de vida com emissao de eventos no Outbox e auditoria imutavel em transacao unica;
+- endpoints REST em TenantController protegidos e validados com esquemas Zod;
+- 8 suites e 44 testes unitarios + 3 suites de integracao com PostgreSQL e Redis.
