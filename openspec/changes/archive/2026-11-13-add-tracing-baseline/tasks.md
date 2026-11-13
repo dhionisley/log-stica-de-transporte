@@ -15,8 +15,8 @@
 ## 3. Testes e Verificação
 
 - [x] 3.1 Criar testes unitários para inicialização do TracerProvider, propagação W3C (`traceparent`), geração de novo span raiz e encerramento limpo.
-- [ ] 3.2 Executar suíte completa (lint, build, testes unitários, testes de integração) e verificar ausência de regressões.
-- [ ] 3.3 Confirmar pipeline CI verde no GitHub Actions, validar OpenSpec em modo estrito e atualizar `docs/ETAPA-10-STATUS.md`.
+- [x] 3.2 Executar suíte completa (lint, build, testes unitários, testes de integração) e verificar ausência de regressões.
+- [x] 3.3 Confirmar pipeline CI verde no GitHub Actions, validar OpenSpec em modo estrito e atualizar `docs/ETAPA-10-STATUS.md`.
 
 ## Workflow follow-up
 

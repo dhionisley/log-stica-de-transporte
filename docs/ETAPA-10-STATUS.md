@@ -113,3 +113,5 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - RequestContextMiddleware inicia span ativo para cada requisicao HTTP e o encerra no fechamento da conexao;
 - correlacao completa: trace_id do span ativo e injetado no RequestContextService e emitido nos logs estruturados;
 - 7 suites e 35 testes unitarios aprovados sem dependencias remotas mandatorias.
+
+- CI remoto verificado em 2026-11-13 no GitHub Actions (commit 4252389): quality (lint, build, 35 testes unitarios), integration (novo runner de migrations em banco limpo, 13 testes de integracao) e security (SCA, gitleaks, CodeQL) todos aprovados (success).
