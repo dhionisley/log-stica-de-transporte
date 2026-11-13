@@ -15,7 +15,7 @@
 ## 3. Verificação
 
 - [x] 3.1 Executar lint, build, testes unitários e de integração sem regressões; verificar o banco local existente (adoção).
-- [ ] 3.2 Confirmar o CI remoto verde, validar OpenSpec em modo estrito e atualizar `docs/ETAPA-10-STATUS.md`.
+- [x] 3.2 Confirmar o CI remoto verde, validar OpenSpec em modo estrito e atualizar `docs/ETAPA-10-STATUS.md`.
 
 ## Workflow follow-up
 

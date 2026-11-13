@@ -103,3 +103,13 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - rollback e protecao contra migrations corrompidas comprovados por testes de integracao;
 - script db:migrate e job de integracao do CI atualizados para usar o novo runner;
 - 6 suites e 28 testes unitarios + 2 suites e 13 testes de integracao aprovados.
+
+- CI remoto verificado em 2026-11-12 no GitHub Actions (commit 635dc83): quality, integration (migrations via novo runner + 13 testes de integracao) e security todos aprovados (success).
+
+## Tracing baseline M0
+
+- TracerProvider OpenTelemetry inicializado no modulo de observabilidade com Resource de servico configuravel;
+- propagador global W3C Trace Context (traceparent) habilitado;
+- RequestContextMiddleware inicia span ativo para cada requisicao HTTP e o encerra no fechamento da conexao;
+- correlacao completa: trace_id do span ativo e injetado no RequestContextService e emitido nos logs estruturados;
+- 7 suites e 35 testes unitarios aprovados sem dependencias remotas mandatorias.
