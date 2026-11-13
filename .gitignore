@@ -6,4 +6,8 @@ coverage/
 !.env.example
 *.log
 .nx/
+.next/
+out/
+.dart_tool/
+
 

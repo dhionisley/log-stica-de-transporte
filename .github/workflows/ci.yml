@@ -15,7 +15,9 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint:api
+      - run: pnpm lint:web
       - run: pnpm build:api
+      - run: pnpm build:web
       - run: pnpm test:api
 
   integration:

@@ -5,8 +5,11 @@
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "dev:api": "pnpm --filter @transport/api dev",
+    "dev:web": "pnpm --filter @transport/web dev",
     "build:api": "pnpm --filter @transport/api build",
+    "build:web": "pnpm --filter @transport/web build",
     "lint:api": "pnpm --filter @transport/api lint",
+    "lint:web": "pnpm --filter @transport/web lint",
     "test:api": "pnpm --filter @transport/api test",
     "test:integration": "pnpm --filter @transport/api test:integration",
     "db:migrate": "pnpm --filter @transport/api db:migrate"

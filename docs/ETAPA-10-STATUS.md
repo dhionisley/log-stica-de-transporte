@@ -115,3 +115,11 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - 7 suites e 35 testes unitarios aprovados sem dependencias remotas mandatorias.
 
 - CI remoto verificado em 2026-11-13 no GitHub Actions (commit 4252389): quality (lint, build, 35 testes unitarios), integration (novo runner de migrations em banco limpo, 13 testes de integracao) e security (SCA, gitleaks, CodeQL) todos aprovados (success).
+
+## Web e Mobile Skeletons M0
+
+- aplicacao Web (apps/web) materializada com Next.js 15, React 19, TypeScript e Tailwind CSS integrada ao workspace pnpm;
+- casca navegavel da Central de Operacoes (Sidebar, Header e painel modular) implementada como base arquitetural para M6;
+- projetos mobile Flutter canônicos criados em apps/driver-mobile e apps/passenger-mobile (pubspec.yaml, analysis_options.yaml e lib/main.dart);
+- build:web e lint:web validados com sucesso e integrados ao job quality do CI;
+- API NestJS permanece 100% integra com 35 testes unitarios aprovados sem regressoes.
