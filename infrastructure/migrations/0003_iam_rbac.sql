@@ -16,6 +16,10 @@ WHERE email_normalized IS NULL;
 ALTER TABLE iam.users
   ALTER COLUMN email_normalized SET NOT NULL;
 
+-- Garante suporte a metadata em audit_records
+ALTER TABLE audit.audit_records
+  ADD COLUMN IF NOT EXISTS metadata jsonb;
+
 -- 2. Catálogo global de permissões
 CREATE TABLE IF NOT EXISTS iam.permissions (
   code text PRIMARY KEY,

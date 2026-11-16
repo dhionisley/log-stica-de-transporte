@@ -100,6 +100,11 @@ export class InvalidPermissionCodeError extends Error {
   }
 }
 
+function toUuidOrNull(val?: string | null): string | null {
+  if (!val) return null;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val) ? val : null;
+}
+
 @Injectable()
 export class IamManagementService {
   constructor(
@@ -157,12 +162,12 @@ export class IamManagementService {
       // Audit
       await client.query(
         `INSERT INTO audit.audit_records (
-           tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
          ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenantId,
           'SYSTEM',
-          actorId,
+          toUuidOrNull(actorId),
           'USER_CREATED',
           'User',
           user.id,
@@ -236,12 +241,12 @@ export class IamManagementService {
       // Audit
       await client.query(
         `INSERT INTO audit.audit_records (
-           tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
          ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenantId,
           'SYSTEM',
-          actorId,
+          toUuidOrNull(actorId),
           'PERMISSION_PROFILE_CREATED',
           'PermissionProfile',
           profile.id,
@@ -313,12 +318,12 @@ export class IamManagementService {
       // Audit
       await client.query(
         `INSERT INTO audit.audit_records (
-           tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
          ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenantId,
           'SYSTEM',
-          actorId,
+          toUuidOrNull(actorId),
           'USER_PROFILE_ASSIGNED',
           'UserProfileAssignment',
           assignment.id,
@@ -372,12 +377,12 @@ export class IamManagementService {
       // Audit
       await client.query(
         `INSERT INTO audit.audit_records (
-           tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
          ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenantId,
           'SYSTEM',
-          actorId,
+          toUuidOrNull(actorId),
           'USER_PROFILE_REVOKED',
           'UserProfileAssignment',
           userId,

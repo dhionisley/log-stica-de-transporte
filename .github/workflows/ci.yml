@@ -47,7 +47,7 @@ jobs:
       - run: pnpm build:api
       - name: Aplicar migrations via runner
         run: DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
-      - run: pnpm test:integration
+      - run: pnpm test:integration -- --verbose
 
   security:
     runs-on: ubuntu-latest

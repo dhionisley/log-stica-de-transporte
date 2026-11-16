@@ -39,6 +39,11 @@ export class TenantSlugConflictError extends Error {
   }
 }
 
+function toUuidOrNull(val?: string | null): string | null {
+  if (!val) return null;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val) ? val : null;
+}
+
 @Injectable()
 export class TenantManagementService {
   constructor(
@@ -88,12 +93,12 @@ export class TenantManagementService {
       // 2. Gravar evidência de auditoria imutável
       await client.query(
         `INSERT INTO audit.audit_records (
-           tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
          ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenant.id,
           'SYSTEM',
-          actorId,
+          toUuidOrNull(actorId),
           'TENANT_PROVISIONED',
           'Tenant',
           tenant.id,
@@ -165,15 +170,15 @@ export class TenantManagementService {
 
       await client.query(
         `INSERT INTO audit.audit_records (
-           tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
          ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenant.id,
           'SYSTEM',
-          actorId,
+          toUuidOrNull(actorId),
           'TENANT_SETTING_UPDATED',
           'TenantSetting',
-          key,
+          tenant.id,
           JSON.stringify({ key, value }),
         ],
       );
@@ -229,12 +234,12 @@ export class TenantManagementService {
 
       await client.query(
         `INSERT INTO audit.audit_records (
-           tenant_id, actor_type, actor_id, action, resource_type, resource_id, metadata
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
          ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
         [
           tenant.id,
           'SYSTEM',
-          actorId,
+          toUuidOrNull(actorId),
           action,
           'Tenant',
           tenant.id,
