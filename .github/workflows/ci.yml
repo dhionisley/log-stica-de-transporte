@@ -47,7 +47,17 @@ jobs:
       - run: pnpm build:api
       - name: Aplicar migrations via runner
         run: DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
-      - run: pnpm test:integration
+      - name: Executar testes de integracao
+        run: |
+          pnpm test:integration > test-output.txt 2>&1 || true
+          cat test-output.txt
+          echo "### Resultado dos Testes de Integracao" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 100 test-output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if grep -q "FAIL " test-output.txt; then
+            exit 1
+          fi
 
   security:
     runs-on: ubuntu-latest
