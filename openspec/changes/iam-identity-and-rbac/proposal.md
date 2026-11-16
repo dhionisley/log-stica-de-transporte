@@ -33,3 +33,4 @@ Nenhuma capability existente tem seus requisitos modificados.
 - Banco de dados: Migration `0003_iam_rbac.sql` executada de forma idempotente e segura com o runner existente.
 - API NestJS: Novo módulo `IamModule` integrado ao monorepo com injeção de dependências desacoplada de frameworks de persistência.
 - Documentos de arquitetura: `data-model-plataforma-transporte.md`, `security-plataforma-transporte.md` e `domain-model-plataforma-transporte.md` seguidos rigorosamente sem qualquer desvio ou quebra de invariantes.
+

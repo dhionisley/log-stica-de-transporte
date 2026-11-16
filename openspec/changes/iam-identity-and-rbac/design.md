@@ -42,3 +42,4 @@ A tabela `iam.users` já existe desde a migration `0001_foundation.sql`, mas ape
 
 - **[Carga de consultas de autorização no banco]** → O esquema define índices compostos cobrindo `(tenant_id, user_id, profile_id)` e `(tenant_id, profile_id, permission_code)`. No próximo incremento, haverá cache local/Redis para sessões ativas.
 - **[Conflito de migração com banco existente]** → A migration `0003_iam_rbac.sql` usa `ALTER TABLE iam.users ADD COLUMN IF NOT EXISTS` e idempotência padrão, testada com o runner em banco limpo e incremental.
+

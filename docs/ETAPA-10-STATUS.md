@@ -135,3 +135,13 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - 8 suites e 44 testes unitarios + 3 suites de integracao com PostgreSQL e Redis.
 
 - CI remoto verificado em 2026-11-13 no GitHub Actions: quality (lint:api, lint:web, build:api, build:web, 44 testes unitarios), integration (runner de migrations com 0001 e 0002 em banco limpo, testes de integracao de ciclo de vida e mensageria confiavel) e security (SCA, gitleaks, CodeQL) todos aprovados (success).
+
+## IAM Identity & RBAC (M1 Incremento 2)
+
+- migration 0003_iam_rbac.sql adicionada com catalogo global iam.permissions, enriquecimento de iam.users e tabelas tenant-scoped iam.permission_profiles, iam.permission_profile_permissions e iam.user_profile_assignments com RLS;
+- chaves estrangeiras compostas tenant-aware (tenant_id, profile_id) e (tenant_id, user_id) garantindo integridade contra associacoes cross-tenant;
+- agregados User, PermissionProfile e UserProfileAssignment implementados no modulo IAM com invariantes de dominio;
+- IamManagementService e AuthorizationService orquestram ciclo de vida de usuarios, perfis e resolucao contextual de permissoes com atomicidade de Transactional Outbox e auditoria append-only;
+- endpoints REST em IamController com validacao rigorosa via esquemas Zod;
+- 9 suites e 54 testes unitarios locais aprovados (+10 novos testes de dominio IAM) + nova suite de testes de integracao PostgreSQL em iam-rbac.integration-spec.ts;
+- build:api, build:web, lint:api e lint:web concluidos com 0 erros.

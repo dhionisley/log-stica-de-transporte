@@ -41,3 +41,4 @@ Toda alteração de perfis de permissão e atribuições de usuários MUST regis
 #### Scenario: Atribuição de perfil a usuário
 - **WHEN** um perfil de acesso é atribuído a um usuário
 - **THEN** a atribuição, o registro de auditoria e o evento `UserProfileAssigned` são confirmados atomicamente no banco
+

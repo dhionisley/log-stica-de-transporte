@@ -82,6 +82,16 @@ describe('MigrationRunner Integration', () => {
     const tableNames = tablesRes.rows.map((r) => r.table_name);
     expect(tableNames).toContain('tenants');
     expect(tableNames).toContain('schema_migrations');
+
+    const iamTablesRes = await testPool.query<{ table_name: string }>(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema = 'iam'`,
+    );
+    const iamTableNames = iamTablesRes.rows.map((r) => r.table_name);
+    expect(iamTableNames).toContain('users');
+    expect(iamTableNames).toContain('permissions');
+    expect(iamTableNames).toContain('permission_profiles');
+    expect(iamTableNames).toContain('permission_profile_permissions');
+    expect(iamTableNames).toContain('user_profile_assignments');
   });
 
   it('is idempotent and applies nothing on re-execution', async () => {
