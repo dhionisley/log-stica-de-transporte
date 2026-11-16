@@ -69,6 +69,7 @@ describe('reliable messaging PostgreSQL integration', () => {
     await pool.query(
       'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform, iam, audit, integration TO transport_rls_test',
     );
+    await pool.query('GRANT transport_rls_test TO CURRENT_USER');
   });
 
   afterAll(async () => {
