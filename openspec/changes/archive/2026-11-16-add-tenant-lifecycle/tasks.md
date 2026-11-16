@@ -17,7 +17,7 @@
 - [x] 3.1 Criar testes unitários para a entidade `Tenant` cobrindo todas as transições válidas e rejeição de transições inválidas.
 - [x] 3.2 Criar testes de integração PostgreSQL cobrindo provisionamento, transições de estado, atomicidade com outbox, registro de auditoria e isolamento RLS de configurações.
 - [x] 3.3 Executar suíte completa de testes (unitários + integração) e validar compilação sem regressões.
-- [ ] 3.4 Confirmar pipeline CI verde no GitHub Actions, validar OpenSpec em modo estrito e atualizar `docs/ETAPA-10-STATUS.md`.
+- [x] 3.4 Confirmar pipeline CI verde no GitHub Actions, validar OpenSpec em modo estrito e atualizar `docs/ETAPA-10-STATUS.md`.
 
 ## Workflow follow-up
 

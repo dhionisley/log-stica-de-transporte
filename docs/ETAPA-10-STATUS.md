@@ -133,3 +133,5 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - TenantManagementService orquestra ciclo de vida com emissao de eventos no Outbox e auditoria imutavel em transacao unica;
 - endpoints REST em TenantController protegidos e validados com esquemas Zod;
 - 8 suites e 44 testes unitarios + 3 suites de integracao com PostgreSQL e Redis.
+
+- CI remoto verificado em 2026-11-13 no GitHub Actions: quality (lint:api, lint:web, build:api, build:web, 44 testes unitarios), integration (runner de migrations com 0001 e 0002 em banco limpo, testes de integracao de ciclo de vida e mensageria confiavel) e security (SCA, gitleaks, CodeQL) todos aprovados (success).
