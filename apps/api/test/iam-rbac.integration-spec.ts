@@ -60,6 +60,7 @@ describe('IAM & RBAC PostgreSQL Integration', () => {
       END $$;
       GRANT USAGE ON SCHEMA platform, iam, audit, integration TO transport_rls_test;
       GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform, iam, audit, integration TO transport_rls_test;
+      GRANT transport_rls_test TO CURRENT_USER;
     `);
 
     const tenantRepo = new PostgresTenantRepository();

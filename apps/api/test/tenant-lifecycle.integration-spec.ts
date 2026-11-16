@@ -47,6 +47,7 @@ describe('Tenant Lifecycle PostgreSQL Integration', () => {
       END $$;
       GRANT USAGE ON SCHEMA platform, iam, audit, integration TO transport_rls_test;
       GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform, iam, audit, integration TO transport_rls_test;
+      GRANT transport_rls_test TO CURRENT_USER;
     `);
 
     tenantRepository = new PostgresTenantRepository();
@@ -124,7 +125,7 @@ describe('Tenant Lifecycle PostgreSQL Integration', () => {
 
     // Confirma eventos de outbox sequenciais
     const events = await testPool.query<{ event_type: string; aggregate_version: number }>(
-      'SELECT event_type, aggregate_version FROM integration.outbox_events WHERE tenant_id = $1 ORDER BY occurred_at ASC',
+      'SELECT event_type, aggregate_version FROM integration.outbox_events WHERE tenant_id = $1 ORDER BY aggregate_version ASC',
       [tenant.id],
     );
     const eventTypes = events.rows.map((r) => r.event_type);
@@ -132,7 +133,7 @@ describe('Tenant Lifecycle PostgreSQL Integration', () => {
 
     // Confirma registros de auditoria
     const auditRecords = await testPool.query<{ action: string }>(
-      'SELECT action FROM audit.audit_records WHERE tenant_id = $1 ORDER BY occurred_at ASC',
+      'SELECT action FROM audit.audit_records WHERE tenant_id = $1 ORDER BY occurred_at ASC, id ASC',
       [tenant.id],
     );
     const actions = auditRecords.rows.map((r) => r.action);
