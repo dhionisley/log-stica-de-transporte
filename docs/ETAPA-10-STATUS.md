@@ -144,4 +144,5 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - IamManagementService e AuthorizationService orquestram ciclo de vida de usuarios, perfis e resolucao contextual de permissoes com atomicidade de Transactional Outbox e auditoria append-only;
 - endpoints REST em IamController com validacao rigorosa via esquemas Zod;
 - 9 suites e 54 testes unitarios locais aprovados (+10 novos testes de dominio IAM) + nova suite de testes de integracao PostgreSQL em iam-rbac.integration-spec.ts;
-- build:api, build:web, lint:api e lint:web concluidos com 0 erros.
+- build:api, build:web, lint:api e lint:web concluidos com 0 erros;
+- CI remoto verificado em 2026-11-16 no GitHub Actions (commit 4fa3b1f, Run 17 / Run ID 43955393903): quality (lint:api, lint:web, build:api, build:web, 54 testes unitarios), integration (runner de migrations com 0001, 0002 e 0003 em banco limpo, 4 suites de testes de integracao) e security (SCA sem vulnerabilidades altas/criticas, gitleaks, CodeQL) todos aprovados (success).

@@ -17,7 +17,7 @@
 - [x] 3.1 Implementar testes unitários para entidades e serviços de autorização de IAM.
 - [x] 3.2 Implementar testes de integração PostgreSQL cobrindo isolamento RLS, integridade referencial cross-tenant e atomicidade transacional com outbox/audit.
 - [x] 3.3 Executar build, linter e testes unitários locais (`pnpm test:api`, `pnpm lint:api`, `pnpm build:api`).
-- [ ] 3.4 Validar change no OpenSpec (`openspec validate iam-identity-and-rbac --strict`) e monitorar CI no GitHub Actions.
+- [x] 3.4 Validar change no OpenSpec (`openspec validate iam-identity-and-rbac --strict`) e monitorar CI no GitHub Actions.
 
 ## Workflow follow-up
 
