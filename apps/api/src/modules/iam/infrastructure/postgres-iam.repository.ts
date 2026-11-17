@@ -14,11 +14,28 @@ import {
   UserProfileAssignment,
   type UserProfileAssignmentProps,
 } from '../domain/user-profile-assignment.entity';
+import {
+  UserCredentials,
+  type UserCredentialsProps,
+} from '../domain/user-credentials.entity';
+import {
+  UserSession,
+  type UserSessionProps,
+} from '../domain/user-session.entity';
+import {
+  MfaMethod,
+  type MfaMethodProps,
+  type MfaMethodType,
+  type MfaMethodStatus,
+} from '../domain/mfa-method.entity';
 import type {
   IUserRepository,
   IPermissionProfileRepository,
   IUserProfileAssignmentRepository,
   IPermissionCatalogRepository,
+  IUserCredentialsRepository,
+  IUserSessionRepository,
+  IMfaMethodRepository,
   PermissionItem,
 } from '../domain/iam.repository';
 
@@ -383,6 +400,325 @@ export class PostgresPermissionCatalogRepository implements IPermissionCatalogRe
       [code],
     );
     return Boolean(res.rows[0]?.exists);
+  }
+}
+
+interface CredentialsRow {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  algorithm: string;
+  password_hash: string;
+  password_salt: string;
+  params: { N: number; r: number; p: number };
+  failed_attempts: number;
+  locked_until: Date | null;
+  password_changed_at: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+@Injectable()
+export class PostgresUserCredentialsRepository implements IUserCredentialsRepository {
+  async findByUserId(client: PoolClient, tenantId: string, userId: string): Promise<UserCredentials | null> {
+    await this.setTenantContext(client, tenantId);
+    const res = await client.query<CredentialsRow>(
+      `SELECT id, tenant_id, user_id, algorithm, password_hash, password_salt, params, failed_attempts, locked_until, password_changed_at, created_at, updated_at
+       FROM iam.user_credentials
+       WHERE tenant_id = $1 AND user_id = $2`,
+      [tenantId, userId],
+    );
+
+    if (res.rows.length === 0) {
+      return null;
+    }
+    return this.mapToEntity(res.rows[0]);
+  }
+
+  async save(client: PoolClient, credentials: UserCredentials): Promise<void> {
+    await this.setTenantContext(client, credentials.tenantId);
+    await client.query(
+      `INSERT INTO iam.user_credentials (
+         id, tenant_id, user_id, algorithm, password_hash, password_salt, params, failed_attempts, locked_until, password_changed_at, created_at, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       ON CONFLICT (tenant_id, user_id) DO UPDATE SET
+         password_hash = EXCLUDED.password_hash,
+         password_salt = EXCLUDED.password_salt,
+         params = EXCLUDED.params,
+         failed_attempts = EXCLUDED.failed_attempts,
+         locked_until = EXCLUDED.locked_until,
+         password_changed_at = EXCLUDED.password_changed_at,
+         updated_at = EXCLUDED.updated_at`,
+      [
+        credentials.id,
+        credentials.tenantId,
+        credentials.userId,
+        credentials.algorithm,
+        credentials.passwordHash,
+        credentials.passwordSalt,
+        JSON.stringify(credentials.params),
+        credentials.failedAttempts,
+        credentials.lockedUntil ?? null,
+        credentials.passwordChangedAt,
+        credentials.createdAt,
+        credentials.updatedAt,
+      ],
+    );
+  }
+
+  private async setTenantContext(client: PoolClient, tenantId: string): Promise<void> {
+    await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantId]);
+  }
+
+  private mapToEntity(row: CredentialsRow): UserCredentials {
+    const props: UserCredentialsProps = {
+      id: row.id,
+      tenantId: row.tenant_id,
+      userId: row.user_id,
+      algorithm: row.algorithm,
+      passwordHash: row.password_hash,
+      passwordSalt: row.password_salt,
+      params: typeof row.params === 'string' ? JSON.parse(row.params) : row.params,
+      failedAttempts: Number(row.failed_attempts),
+      lockedUntil: row.locked_until ?? undefined,
+      passwordChangedAt: row.password_changed_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+    return UserCredentials.reconstitute(props);
+  }
+}
+
+interface SessionRow {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  device_id: string | null;
+  device_name: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  refresh_token_hash: string;
+  created_at: Date;
+  expires_at: Date;
+  revoked_at: Date | null;
+  revocation_reason: string | null;
+  last_seen_at: Date;
+  updated_at: Date;
+}
+
+@Injectable()
+export class PostgresUserSessionRepository implements IUserSessionRepository {
+  async findById(client: PoolClient, tenantId: string, id: string): Promise<UserSession | null> {
+    await this.setTenantContext(client, tenantId);
+    const res = await client.query<SessionRow>(
+      `SELECT id, tenant_id, user_id, device_id, device_name, ip_address, user_agent, refresh_token_hash, created_at, expires_at, revoked_at, revocation_reason, last_seen_at, updated_at
+       FROM iam.sessions
+       WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, id],
+    );
+
+    if (res.rows.length === 0) {
+      return null;
+    }
+    return this.mapToEntity(res.rows[0]);
+  }
+
+  async findByRefreshTokenHash(
+    client: PoolClient,
+    tenantId: string,
+    refreshTokenHash: string,
+  ): Promise<UserSession | null> {
+    await this.setTenantContext(client, tenantId);
+    const res = await client.query<SessionRow>(
+      `SELECT id, tenant_id, user_id, device_id, device_name, ip_address, user_agent, refresh_token_hash, created_at, expires_at, revoked_at, revocation_reason, last_seen_at, updated_at
+       FROM iam.sessions
+       WHERE tenant_id = $1 AND refresh_token_hash = $2`,
+      [tenantId, refreshTokenHash],
+    );
+
+    if (res.rows.length === 0) {
+      return null;
+    }
+    return this.mapToEntity(res.rows[0]);
+  }
+
+  async save(client: PoolClient, session: UserSession): Promise<void> {
+    await this.setTenantContext(client, session.tenantId);
+    await client.query(
+      `INSERT INTO iam.sessions (
+         id, tenant_id, user_id, device_id, device_name, ip_address, user_agent, refresh_token_hash, created_at, expires_at, revoked_at, revocation_reason, last_seen_at, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       ON CONFLICT (id) DO UPDATE SET
+         refresh_token_hash = EXCLUDED.refresh_token_hash,
+         expires_at = EXCLUDED.expires_at,
+         revoked_at = EXCLUDED.revoked_at,
+         revocation_reason = EXCLUDED.revocation_reason,
+         last_seen_at = EXCLUDED.last_seen_at,
+         updated_at = EXCLUDED.updated_at`,
+      [
+        session.id,
+        session.tenantId,
+        session.userId,
+        session.deviceId ?? null,
+        session.deviceName ?? null,
+        session.ipAddress ?? null,
+        session.userAgent ?? null,
+        session.refreshTokenHash,
+        session.createdAt,
+        session.expiresAt,
+        session.revokedAt ?? null,
+        session.revocationReason ?? null,
+        session.lastSeenAt,
+        session.updatedAt,
+      ],
+    );
+  }
+
+  async revokeAllForUser(client: PoolClient, tenantId: string, userId: string, reason = 'BULK_REVOCATION'): Promise<void> {
+    await this.setTenantContext(client, tenantId);
+    await client.query(
+      `UPDATE iam.sessions
+       SET revoked_at = now(), revocation_reason = $3, updated_at = now()
+       WHERE tenant_id = $1 AND user_id = $2 AND revoked_at IS NULL`,
+      [tenantId, userId, reason],
+    );
+  }
+
+  async listActiveByUserId(client: PoolClient, tenantId: string, userId: string): Promise<UserSession[]> {
+    await this.setTenantContext(client, tenantId);
+    const res = await client.query<SessionRow>(
+      `SELECT id, tenant_id, user_id, device_id, device_name, ip_address, user_agent, refresh_token_hash, created_at, expires_at, revoked_at, revocation_reason, last_seen_at, updated_at
+       FROM iam.sessions
+       WHERE tenant_id = $1 AND user_id = $2 AND revoked_at IS NULL AND expires_at > now()
+       ORDER BY last_seen_at DESC`,
+      [tenantId, userId],
+    );
+    return res.rows.map((r) => this.mapToEntity(r));
+  }
+
+  private async setTenantContext(client: PoolClient, tenantId: string): Promise<void> {
+    await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantId]);
+  }
+
+  private mapToEntity(row: SessionRow): UserSession {
+    const props: UserSessionProps = {
+      id: row.id,
+      tenantId: row.tenant_id,
+      userId: row.user_id,
+      deviceId: row.device_id ?? undefined,
+      deviceName: row.device_name ?? undefined,
+      ipAddress: row.ip_address ?? undefined,
+      userAgent: row.user_agent ?? undefined,
+      refreshTokenHash: row.refresh_token_hash,
+      createdAt: row.created_at,
+      expiresAt: row.expires_at,
+      revokedAt: row.revoked_at ?? undefined,
+      revocationReason: row.revocation_reason ?? undefined,
+      lastSeenAt: row.last_seen_at,
+      updatedAt: row.updated_at,
+    };
+    return UserSession.reconstitute(props);
+  }
+}
+
+interface MfaRow {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  method_type: MfaMethodType;
+  status: MfaMethodStatus;
+  secret_encrypted: string | null;
+  backup_codes: string[] | string | null;
+  created_at: Date;
+  verified_at: Date | null;
+  updated_at: Date;
+}
+
+@Injectable()
+export class PostgresMfaMethodRepository implements IMfaMethodRepository {
+  async findByUserAndType(
+    client: PoolClient,
+    tenantId: string,
+    userId: string,
+    methodType: MfaMethodType,
+  ): Promise<MfaMethod | null> {
+    await this.setTenantContext(client, tenantId);
+    const res = await client.query<MfaRow>(
+      `SELECT id, tenant_id, user_id, method_type, status, secret_encrypted, backup_codes, created_at, verified_at, updated_at
+       FROM iam.mfa_methods
+       WHERE tenant_id = $1 AND user_id = $2 AND method_type = $3`,
+      [tenantId, userId, methodType],
+    );
+
+    if (res.rows.length === 0) {
+      return null;
+    }
+    return this.mapToEntity(res.rows[0]);
+  }
+
+  async listByUser(client: PoolClient, tenantId: string, userId: string): Promise<MfaMethod[]> {
+    await this.setTenantContext(client, tenantId);
+    const res = await client.query<MfaRow>(
+      `SELECT id, tenant_id, user_id, method_type, status, secret_encrypted, backup_codes, created_at, verified_at, updated_at
+       FROM iam.mfa_methods
+       WHERE tenant_id = $1 AND user_id = $2
+       ORDER BY created_at ASC`,
+      [tenantId, userId],
+    );
+    return res.rows.map((r) => this.mapToEntity(r));
+  }
+
+  async save(client: PoolClient, method: MfaMethod): Promise<void> {
+    await this.setTenantContext(client, method.tenantId);
+    await client.query(
+      `INSERT INTO iam.mfa_methods (
+         id, tenant_id, user_id, method_type, status, secret_encrypted, backup_codes, created_at, verified_at, updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (tenant_id, user_id, method_type) DO UPDATE SET
+         status = EXCLUDED.status,
+         secret_encrypted = EXCLUDED.secret_encrypted,
+         backup_codes = EXCLUDED.backup_codes,
+         verified_at = EXCLUDED.verified_at,
+         updated_at = EXCLUDED.updated_at`,
+      [
+        method.id,
+        method.tenantId,
+        method.userId,
+        method.methodType,
+        method.status,
+        method.secretEncrypted ?? null,
+        method.backupCodes ? JSON.stringify(method.backupCodes) : null,
+        method.createdAt,
+        method.verifiedAt ?? null,
+        method.updatedAt,
+      ],
+    );
+  }
+
+  private async setTenantContext(client: PoolClient, tenantId: string): Promise<void> {
+    await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [tenantId]);
+  }
+
+  private mapToEntity(row: MfaRow): MfaMethod {
+    let parsedBackupCodes: string[] | undefined;
+    if (row.backup_codes) {
+      parsedBackupCodes =
+        typeof row.backup_codes === 'string' ? JSON.parse(row.backup_codes) : row.backup_codes;
+    }
+
+    const props: MfaMethodProps = {
+      id: row.id,
+      tenantId: row.tenant_id,
+      userId: row.user_id,
+      methodType: row.method_type,
+      status: row.status,
+      secretEncrypted: row.secret_encrypted ?? undefined,
+      backupCodes: parsedBackupCodes,
+      createdAt: row.created_at,
+      verifiedAt: row.verified_at ?? undefined,
+      updatedAt: row.updated_at,
+    };
+    return MfaMethod.reconstitute(props);
   }
 }
 

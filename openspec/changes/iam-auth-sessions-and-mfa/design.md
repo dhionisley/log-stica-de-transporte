@@ -58,3 +58,4 @@ A plataforma SaaS multitenant de transporte de pessoas já possui os agregados d
 1. Executar a migration `0004_iam_auth_sessions.sql` criando `iam.user_credentials`, `iam.sessions` e `iam.mfa_methods` com RLS habilitado e policies isolando por `app.tenant_id`.
 2. As tabelas existentes permanecem intocadas de forma backward-compatible; usuários criados sem credenciais continuam válidos no modelo, permitindo provisionamento progressivo de senhas.
 3. Rollback: caso necessário, remoção das tabelas criadas pela migration 0004 sem afetar `iam.users` ou `iam.permission_profiles`.
+

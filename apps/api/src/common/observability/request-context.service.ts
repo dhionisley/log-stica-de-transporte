@@ -4,6 +4,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 export interface RequestMetadata {
   requestId: string;
   traceId?: string;
+  tenantId?: string;
+  userId?: string;
+  sessionId?: string;
 }
 
 @Injectable()

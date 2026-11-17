@@ -29,3 +29,4 @@ Com as capacidades de ciclo de vida de tenants (`platform/tenant-lifecycle`) e m
 - **Segurança e Guards**: `JwtAuthGuard` exportado ou registrado como guard padrão para rotas autenticadas da API, preservando compatibilidade com rotas públicas (`health/*`, `auth/login`, `auth/mfa/verify`).
 - **Dependencies**: Utilização de bibliotecas seguras e consolidadas para tokens JWT (`@nestjs/jwt` ou nativo `jsonwebtoken`) e hashing/TOTP sem quebrar restrições de compatibilidade.
 - **Fora de Escopo**: Provedores externos de SSO/SAML federado ou biometria WebAuthn física de hardware em nível de browser (serão plugados via ports/adapters em fases posteriores).
+

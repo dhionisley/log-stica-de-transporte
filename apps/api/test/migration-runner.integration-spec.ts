@@ -92,6 +92,9 @@ describe('MigrationRunner Integration', () => {
     expect(iamTableNames).toContain('permission_profiles');
     expect(iamTableNames).toContain('permission_profile_permissions');
     expect(iamTableNames).toContain('user_profile_assignments');
+    expect(iamTableNames).toContain('user_credentials');
+    expect(iamTableNames).toContain('sessions');
+    expect(iamTableNames).toContain('mfa_methods');
   });
 
   it('is idempotent and applies nothing on re-execution', async () => {

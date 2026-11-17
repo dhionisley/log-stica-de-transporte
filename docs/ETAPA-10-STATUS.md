@@ -146,3 +146,17 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - 9 suites e 54 testes unitarios locais aprovados (+10 novos testes de dominio IAM) + nova suite de testes de integracao PostgreSQL em iam-rbac.integration-spec.ts;
 - build:api, build:web, lint:api e lint:web concluidos com 0 erros;
 - CI remoto verificado em 2026-11-16 no GitHub Actions (commit 4fa3b1f, Run 17 / Run ID 43955393903): quality (lint:api, lint:web, build:api, build:web, 54 testes unitarios), integration (runner de migrations com 0001, 0002 e 0003 em banco limpo, 4 suites de testes de integracao) e security (SCA sem vulnerabilidades altas/criticas, gitleaks, CodeQL) todos aprovados (success).
+
+## IAM Authentication, Sessions & MFA (M1 Incremento 3)
+
+- migration 0004_iam_auth_sessions.sql adicionada com iam.user_credentials, iam.sessions e iam.mfa_methods protegidas por RLS e chaves estrangeiras tenant-aware (tenant_id, user_id);
+- hashing de senhas implementado com scrypt e salt criptografico individual por credencial com proteção de bloqueio temporario (lockout apos 5 falhas consecutivas);
+- segredos de segundo fator protegidos em repouso com cifragem AES-256-GCM;
+- motor TOTP nativo (RFC 6238) com HMAC-SHA1, 6 digitos, janela de tolerancia de 30s (+-1 step) e gerador de codigos de backup unicos com hash SHA-256;
+- gestao de sessoes revogaveis em duas camadas: persistencia em iam.sessions (PostgreSQL com RLS) e cache de validacao sub-milissegundo em Redis (iam:session:<id>);
+- rotatividade de refresh token com deteccao e revogacao imediata de toda a arvore de sessoes em caso de tentativa de reuso malicioso;
+- desafio obrigatorio de MFA para usuarios com flag mfa_required e perfis administrativos/supervisores;
+- JwtAuthGuard tenant-aware com suporte a @Public(), validacao de assinatura e revogacao de sessao no Redis e injecao de tenantId no RequestContextService;
+- AuthController com endpoints REST (/login, /mfa/verify, /refresh, /logout, /mfa/setup, /mfa/activate, /users/:id/password) validados com Zod;
+- 10 suites e 66 testes unitarios locais aprovados (+12 novos testes em iam-auth.spec.ts) e suite completa de testes de integracao em iam-auth.integration-spec.ts;
+- build:api, build:web, lint:api e lint:web validados com sucesso.
