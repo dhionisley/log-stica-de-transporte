@@ -159,4 +159,5 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - JwtAuthGuard tenant-aware com suporte a @Public(), validacao de assinatura e revogacao de sessao no Redis e injecao de tenantId no RequestContextService;
 - AuthController com endpoints REST (/login, /mfa/verify, /refresh, /logout, /mfa/setup, /mfa/activate, /users/:id/password) validados com Zod;
 - 10 suites e 66 testes unitarios locais aprovados (+12 novos testes em iam-auth.spec.ts) e suite completa de testes de integracao em iam-auth.integration-spec.ts;
-- build:api, build:web, lint:api e lint:web validados com sucesso.
+- build:api, build:web, lint:api e lint:web validados com sucesso;
+- CI remoto verificado em 2026-11-18 no GitHub Actions (commit 4690345, Run 21 / Run ID 44325931365): quality (lint:api, lint:web, build:api, build:web, 66 testes unitarios), integration (runner de migrations com 0001, 0002, 0003 e 0004 em banco limpo, 5 suites de testes de integracao) e security (SCA com pnpm audit zero falhas, gitleaks, CodeQL) todos aprovados (success).
