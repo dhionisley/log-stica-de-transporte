@@ -27,3 +27,4 @@ Com o ciclo de vida de tenants (`platform/tenant-lifecycle`), RBAC contextual (`
 - **Módulo Platform**: Novos agregados `Plan`, `Subscription` e serviços de aplicação em `apps/api/src/modules/platform/`.
 - **API & Decorators**: `EntitlementGuard` disponível para interceptar endpoints operacionais nos milestones futuros (M2 a M14).
 - **Fora de Escopo**: Faturamento recorrente com gateway de pagamento externo (PIX, cartão, boleto) e emissão de NFS-e (pertencentes aos Milestones M11 e M12).
+

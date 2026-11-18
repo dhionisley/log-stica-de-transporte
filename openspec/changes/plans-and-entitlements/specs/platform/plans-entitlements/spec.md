@@ -53,3 +53,4 @@ O sistema DEVE (SHALL) isolar os registros de assinaturas e limites customizados
 #### Scenario: Tentativa de consulta cruzada de assinatura
 - **WHEN** uma sessão autenticada sob o Tenant A tenta ler ou consultar a assinatura pertencente ao Tenant B
 - **THEN** a camada de isolamento RLS e o repositório omitem os dados do Tenant B retornando vazio ou HTTP 404
+

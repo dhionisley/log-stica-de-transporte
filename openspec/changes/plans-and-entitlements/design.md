@@ -62,3 +62,4 @@ A plataforma SaaS multitenant de transporte de pessoas possui controle de tenant
 2. Inserir seeds dos planos base (`STARTER`, `PROFESSIONAL`, `ENTERPRISE`) com limites padrão.
 3. Garantir migração retrocompatível: caso tenants existentes não possuam assinatura vinculada, um script inicial associa-os automaticamente ao plano `PROFESSIONAL` como baseline ativo.
 4. Rollback: remoção das tabelas da migration 0005 de forma segura sem afetar `platform.tenants` ou `platform.tenant_settings`.
+

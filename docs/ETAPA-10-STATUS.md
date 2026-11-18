@@ -161,3 +161,15 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - 10 suites e 66 testes unitarios locais aprovados (+12 novos testes em iam-auth.spec.ts) e suite completa de testes de integracao em iam-auth.integration-spec.ts;
 - build:api, build:web, lint:api e lint:web validados com sucesso;
 - CI remoto verificado em 2026-11-18 no GitHub Actions (commit 4690345, Run 21 / Run ID 44325931365): quality (lint:api, lint:web, build:api, build:web, 66 testes unitarios), integration (runner de migrations com 0001, 0002, 0003 e 0004 em banco limpo, 5 suites de testes de integracao) e security (SCA com pnpm audit zero falhas, gitleaks, CodeQL) todos aprovados (success).
+
+## Plans, Entitlements & Subscriptions (M1 Incremento 4)
+
+- migration 0005_plans_and_entitlements.sql adicionada com catalogo global platform.plans, platform.plan_features e assinaturas tenant-scoped platform.subscriptions com RLS habilitado e chaves estrangeiras compostas;
+- seeds dos planos padrao (STARTER, PROFESSIONAL, ENTERPRISE) com limites quantitativos e feature flags operacionais;
+- agregados Plan, PlanFeature e Subscription modelados com maquina de estados e invariantes de negocio;
+- EntitlementService com resolucao de direitos em tempo de execucao, padrao de sobreposicao (overlay de custom_limits) e cache no Redis (platform:entitlements:<tenant_id>);
+- SubscriptionManagementService orquestrando criacao, atualizacao de limites customizados e troca de plano com eventos no Transactional Outbox (SubscriptionCreated, PlanChanged, CustomLimitsUpdated) e auditoria imutavel;
+- EntitlementGuard e decorator @RequireFeature integrados para protecao declarativa de endpoints na API;
+- PlanController e SubscriptionController com endpoints REST protegidos e validados com esquemas Zod;
+- 11 suites e 75 testes unitarios locais aprovados (+9 novos testes em plans-entitlements.spec.ts) e suite de testes de integracao em plans-entitlements.integration-spec.ts;
+- build:api, build:web, lint:api e lint:web validados com 0 erros.

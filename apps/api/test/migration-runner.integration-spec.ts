@@ -82,6 +82,9 @@ describe('MigrationRunner Integration', () => {
     const tableNames = tablesRes.rows.map((r) => r.table_name);
     expect(tableNames).toContain('tenants');
     expect(tableNames).toContain('schema_migrations');
+    expect(tableNames).toContain('plans');
+    expect(tableNames).toContain('plan_features');
+    expect(tableNames).toContain('subscriptions');
 
     const iamTablesRes = await testPool.query<{ table_name: string }>(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'iam'`,
