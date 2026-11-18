@@ -172,4 +172,6 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - EntitlementGuard e decorator @RequireFeature integrados para protecao declarativa de endpoints na API;
 - PlanController e SubscriptionController com endpoints REST protegidos e validados com esquemas Zod;
 - 11 suites e 75 testes unitarios locais aprovados (+9 novos testes em plans-entitlements.spec.ts) e suite de testes de integracao em plans-entitlements.integration-spec.ts;
-- build:api, build:web, lint:api e lint:web validados com 0 erros.
+- build:api, build:web, lint:api e lint:web validados com 0 erros;
+- CI remoto verificado em 2026-11-18 no GitHub Actions (commit aaff829, Run 25 / Run ID 44345872282): quality (lint:api, lint:web, build:api, build:web, 75 testes unitarios), integration (runner de migrations com 0001, 0002, 0003, 0004 e 0005 em banco limpo, 6 suites de testes de integracao) e security (SCA com pnpm audit zero falhas, gitleaks, CodeQL) todos aprovados (success).
+- Milestone M1 (SaaS Control Plane + IAM) 100% concluído.
