@@ -105,6 +105,15 @@ describe('MigrationRunner Integration', () => {
     const crmTableNames = crmTablesRes.rows.map((r) => r.table_name);
     expect(crmTableNames).toContain('client_companies');
     expect(crmTableNames).toContain('company_users');
+
+    const workforceTablesRes = await testPool.query<{ table_name: string }>(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema = 'workforce'`,
+    );
+    const workforceTableNames = workforceTablesRes.rows.map((r) => r.table_name);
+    expect(workforceTableNames).toContain('people');
+    expect(workforceTableNames).toContain('employees');
+    expect(workforceTableNames).toContain('company_employments');
+    expect(workforceTableNames).toContain('provisional_transport_authorizations');
   });
 
   it('is idempotent and applies nothing on re-execution', async () => {
