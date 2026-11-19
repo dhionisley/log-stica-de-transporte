@@ -186,3 +186,16 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - 12 suítes e 85 testes unitários locais aprovados (+10 novos testes em client-companies.spec.ts) e suíte completa de integração PostgreSQL em client-companies.integration-spec.ts;
 - build:api, build:web, lint:api e lint:web validados com 0 erros;
 - CI remoto verificado em 2026-11-19 no GitHub Actions (commit 1839567, Run 27 / Run ID 44599423665): quality (lint:api, lint:web, build:api, build:web, 85 testes unitarios), integration (runner de migrations com 0001 a 0006 em banco limpo, 7 suítes de testes de integração) e security (SCA, gitleaks, CodeQL) todos aprovados (success).
+
+## People & Workforce Master Data (M2 Incremento 2)
+
+- migration 0007_workforce_people_and_employment.sql adicionada com schema workforce e tabelas workforce.people, workforce.employees, workforce.company_employments e workforce.provisional_transport_authorizations com RLS estrito e chaves compostas tenant-aware;
+- agregado Person com validação matemática estrita de dígitos verificadores de CPF (Receita Federal) e unicidade por tenant;
+- agregado Employee com controle de estado de conta (LINKED/UNLINKED) e ciclo de vida (ACTIVE, INACTIVE, SUSPENDED com justificativa mandatória);
+- entidade CompanyEmployment suportando colaboradores com múltiplos vínculos simultâneos em empresas clientes contratantes distintas, com validação de vigência temporal (valid_from/valid_to) e gate de privacidade restrito (uma empresa cliente nunca visualiza vínculos de outra empresa);
+- entidade ProvisionalTransportAuthorization gerenciando autorizações temporárias de passageiro com período de vigência e auditoria de concessão/revogação;
+- PostgresWorkforceRepository e WorkforceManagementService orquestrando concorrência otimista (version), publicação confiável no Transactional Outbox (PersonCreated, PersonUpdated, EmployeeCreated, EmployeeStatusChanged, CompanyEmploymentCreated, CompanyEmploymentTerminated, ProvisionalAuthorizationGranted, ProvisionalAuthorizationRevoked) e auditoria append-only em audit.audit_records;
+- WorkforceController expondo endpoints REST validados com Zod (/workforce/people, /workforce/employees, /workforce/employments, /workforce/provisional-authorizations);
+- 13 suítes e 101 testes unitários locais aprovados (+16 novos testes em workforce.spec.ts) e suíte completa de integração PostgreSQL em workforce.integration-spec.ts;
+- build:api, build:web, lint:api e lint:web validados com 0 erros;
+- CI remoto verificado em 2026-11-19 no GitHub Actions (commit 983fa26, Run 29 / Run ID 44611840495): quality (lint:api, lint:web, build:api, build:web, 101 testes unitarios), integration (runner de migrations com 0001 a 0007 em banco limpo, 8 suítes de testes de integração) e security (SCA, gitleaks, CodeQL) todos aprovados (success).
