@@ -98,6 +98,13 @@ describe('MigrationRunner Integration', () => {
     expect(iamTableNames).toContain('user_credentials');
     expect(iamTableNames).toContain('sessions');
     expect(iamTableNames).toContain('mfa_methods');
+
+    const crmTablesRes = await testPool.query<{ table_name: string }>(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema = 'crm'`,
+    );
+    const crmTableNames = crmTablesRes.rows.map((r) => r.table_name);
+    expect(crmTableNames).toContain('client_companies');
+    expect(crmTableNames).toContain('company_users');
   });
 
   it('is idempotent and applies nothing on re-execution', async () => {
