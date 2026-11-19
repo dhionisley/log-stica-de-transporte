@@ -175,3 +175,14 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - build:api, build:web, lint:api e lint:web validados com 0 erros;
 - CI remoto verificado em 2026-11-18 no GitHub Actions (commit aaff829, Run 25 / Run ID 44345872282): quality (lint:api, lint:web, build:api, build:web, 75 testes unitarios), integration (runner de migrations com 0001, 0002, 0003, 0004 e 0005 em banco limpo, 6 suites de testes de integracao) e security (SCA com pnpm audit zero falhas, gitleaks, CodeQL) todos aprovados (success).
 - Milestone M1 (SaaS Control Plane + IAM) 100% concluído.
+
+## Client Companies Master Data (M2 Incremento 1)
+
+- migration 0006_crm_client_companies.sql adicionada com schema crm, tabelas crm.client_companies e crm.company_users com RLS estrito habilitado e chaves compostas tenant-aware (tenant_id, id);
+- constraint de unicidade composta (tenant_id, tax_id) garantindo unicidade de CNPJ por tenant, permitindo atendimento multilocatário da mesma empresa em locatários distintos;
+- agregado ClientCompany implementado com máquina de estados (ACTIVE, INACTIVE, BLOCKED), validação estrita de dígito verificador de CNPJ (Receita Federal) e Value Objects para billing_address e contacts;
+- PostgresClientCompanyRepository e ClientCompanyManagementService orquestrando persistência com concorrência otimista (version), publicação atômica no Transactional Outbox (ClientCompanyCreated, ClientCompanyUpdated, ClientCompanyStatusChanged) e auditoria imutável em audit.audit_records;
+- ClientCompanyController expondo endpoints REST validados com Zod (/clients, /clients/:id, /clients/:id/status);
+- 12 suítes e 85 testes unitários locais aprovados (+10 novos testes em client-companies.spec.ts) e suíte completa de integração PostgreSQL em client-companies.integration-spec.ts;
+- build:api, build:web, lint:api e lint:web validados com 0 erros;
+- CI remoto verificado em 2026-11-19 no GitHub Actions (commit 1839567, Run 27 / Run ID 44599423665): quality (lint:api, lint:web, build:api, build:web, 85 testes unitarios), integration (runner de migrations com 0001 a 0006 em banco limpo, 7 suítes de testes de integração) e security (SCA, gitleaks, CodeQL) todos aprovados (success).
