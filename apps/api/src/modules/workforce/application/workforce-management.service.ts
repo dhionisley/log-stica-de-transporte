@@ -22,8 +22,21 @@ import {
   type ProvisionalAuthStatus,
 } from '../domain/provisional-transport-authorization.entity';
 import {
+  Driver,
+} from '../domain/driver.entity';
+import {
+  DriverDocument,
+} from '../domain/driver-document.entity';
+import {
+  type DriverDocumentStatus,
+  type DriverLicenseCategory,
+  type DriverStatus,
+} from '../domain/driver.types';
+import {
   WORKFORCE_REPOSITORY_TOKEN,
+  type DriverEligibilityRecord,
   type IWorkforceRepository,
+  type ListDriversFilter,
   type ListEmployeesFilter,
   type ListEmploymentsFilter,
   type ListPeopleFilter,
@@ -160,6 +173,79 @@ export class ProvisionalAuthNotFoundError extends Error {
   constructor(id: string) {
     super(`Provisional authorization not found: ${id}`);
     this.name = 'ProvisionalAuthNotFoundError';
+  }
+}
+
+export interface CreateDriverDto {
+  personId: string;
+  licenseNumber: string;
+  licenseCategory: DriverLicenseCategory;
+  licenseExpiresAt: Date | string;
+}
+
+export interface UpdateDriverDto {
+  licenseCategory?: DriverLicenseCategory;
+  licenseExpiresAt?: Date | string;
+}
+
+export interface SuspendDriverDto {
+  reason: string;
+}
+
+export interface AttachDriverDocumentDto {
+  documentType: string;
+  documentNumber: string;
+  expiresAt?: Date | string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface DriverResponseDto {
+  id: string;
+  tenantId: string;
+  personId: string;
+  licenseNumber: string;
+  licenseCategory: DriverLicenseCategory;
+  licenseExpiresAt: string;
+  status: DriverStatus;
+  suspensionReason?: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  documents?: DriverDocumentResponseDto[];
+}
+
+export interface DriverDocumentResponseDto {
+  id: string;
+  tenantId: string;
+  driverId: string;
+  documentType: string;
+  documentNumber: string;
+  expiresAt?: string;
+  status: DriverDocumentStatus;
+  metadata: Record<string, unknown>;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export class DriverNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Driver not found: ${id}`);
+    this.name = 'DriverNotFoundError';
+  }
+}
+
+export class DriverPersonConflictError extends Error {
+  constructor(personId: string) {
+    super(`Driver qualification already exists for person: ${personId}`);
+    this.name = 'DriverPersonConflictError';
+  }
+}
+
+export class DriverLicenseConflictError extends Error {
+  constructor(licenseNumber: string) {
+    super(`Driver with license number "${licenseNumber}" already exists in this tenant`);
+    this.name = 'DriverLicenseConflictError';
   }
 }
 
@@ -819,4 +905,383 @@ export class WorkforceManagementService {
       updatedAt: auth.updatedAt.toISOString(),
     };
   }
+
+  async createDriver(
+    tenantId: string,
+    dto: CreateDriverDto,
+    actorId = 'system',
+  ): Promise<DriverResponseDto> {
+    return this.withTenantTransaction(tenantId, async (client) => {
+      const person = await this.repository.findPersonById(dto.personId, client);
+      if (!person) {
+        throw new PersonNotFoundError(dto.personId);
+      }
+
+      const existingByPerson = await this.repository.findDriverByPersonId(dto.personId, client);
+      if (existingByPerson) {
+        throw new DriverPersonConflictError(dto.personId);
+      }
+
+      const existingByLicense = await this.repository.findDriverByLicenseNumber(dto.licenseNumber.trim(), client);
+      if (existingByLicense) {
+        throw new DriverLicenseConflictError(dto.licenseNumber.trim());
+      }
+
+      const expiresAt = typeof dto.licenseExpiresAt === 'string' ? new Date(dto.licenseExpiresAt) : dto.licenseExpiresAt;
+
+      const driver = Driver.create({
+        tenantId,
+        personId: dto.personId,
+        licenseNumber: dto.licenseNumber,
+        licenseCategory: dto.licenseCategory,
+        licenseExpiresAt: expiresAt,
+      });
+
+      await this.repository.saveDriver(driver, client);
+
+      await this.outboxRepository.append(client, {
+        eventId: randomUUID(),
+        tenantId,
+        aggregateType: 'Driver',
+        aggregateId: driver.id,
+        aggregateVersion: driver.version,
+        schemaVersion: 1,
+        occurredAt: new Date(),
+        eventType: 'DriverCreated',
+        payload: toIntegrationPayload({
+          id: driver.id,
+          tenantId: driver.tenantId,
+          personId: driver.personId,
+          licenseNumber: driver.licenseNumber,
+          licenseCategory: driver.licenseCategory,
+          status: driver.status,
+        }),
+      });
+
+      await client.query(
+        `INSERT INTO audit.audit_records (
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+        [
+          tenantId,
+          'USER',
+          toUuidOrNull(actorId),
+          'DRIVER_CREATED',
+          'Driver',
+          driver.id,
+          JSON.stringify({
+            personId: driver.personId,
+            licenseNumber: driver.licenseNumber,
+            licenseCategory: driver.licenseCategory,
+            status: driver.status,
+          }),
+        ],
+      );
+
+      return this.toDriverDto(driver);
+    });
+  }
+
+  async updateDriver(
+    tenantId: string,
+    driverId: string,
+    dto: UpdateDriverDto,
+    actorId = 'system',
+  ): Promise<DriverResponseDto> {
+    return this.withTenantTransaction(tenantId, async (client) => {
+      const driver = await this.repository.findDriverById(driverId, client);
+      if (!driver) {
+        throw new DriverNotFoundError(driverId);
+      }
+
+      const beforeState = {
+        licenseCategory: driver.licenseCategory,
+        licenseExpiresAt: driver.licenseExpiresAt.toISOString(),
+      };
+
+      const expiresAt =
+        dto.licenseExpiresAt !== undefined
+          ? typeof dto.licenseExpiresAt === 'string'
+            ? new Date(dto.licenseExpiresAt)
+            : dto.licenseExpiresAt
+          : undefined;
+
+      driver.update({
+        licenseCategory: dto.licenseCategory,
+        licenseExpiresAt: expiresAt,
+      });
+
+      await this.repository.saveDriver(driver, client);
+
+      await this.outboxRepository.append(client, {
+        eventId: randomUUID(),
+        tenantId,
+        aggregateType: 'Driver',
+        aggregateId: driver.id,
+        aggregateVersion: driver.version,
+        schemaVersion: 1,
+        occurredAt: new Date(),
+        eventType: 'DriverUpdated',
+        payload: toIntegrationPayload({
+          id: driver.id,
+          tenantId: driver.tenantId,
+          licenseCategory: driver.licenseCategory,
+          licenseExpiresAt: driver.licenseExpiresAt.toISOString(),
+        }),
+      });
+
+      await client.query(
+        `INSERT INTO audit.audit_records (
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, before_state, after_state
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb)`,
+        [
+          tenantId,
+          'USER',
+          toUuidOrNull(actorId),
+          'DRIVER_UPDATED',
+          'Driver',
+          driver.id,
+          JSON.stringify(beforeState),
+          JSON.stringify({
+            licenseCategory: driver.licenseCategory,
+            licenseExpiresAt: driver.licenseExpiresAt.toISOString(),
+          }),
+        ],
+      );
+
+      return this.toDriverDto(driver);
+    });
+  }
+
+  async suspendDriver(
+    tenantId: string,
+    driverId: string,
+    dto: SuspendDriverDto,
+    actorId = 'system',
+  ): Promise<DriverResponseDto> {
+    return this.withTenantTransaction(tenantId, async (client) => {
+      const driver = await this.repository.findDriverById(driverId, client);
+      if (!driver) {
+        throw new DriverNotFoundError(driverId);
+      }
+
+      driver.suspend(dto.reason);
+      await this.repository.saveDriver(driver, client);
+
+      await this.outboxRepository.append(client, {
+        eventId: randomUUID(),
+        tenantId,
+        aggregateType: 'Driver',
+        aggregateId: driver.id,
+        aggregateVersion: driver.version,
+        schemaVersion: 1,
+        occurredAt: new Date(),
+        eventType: 'DriverSuspended',
+        payload: toIntegrationPayload({
+          id: driver.id,
+          reason: dto.reason,
+        }),
+      });
+
+      await client.query(
+        `INSERT INTO audit.audit_records (
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+        [
+          tenantId,
+          'USER',
+          toUuidOrNull(actorId),
+          'DRIVER_SUSPENDED',
+          'Driver',
+          driver.id,
+          JSON.stringify({
+            status: driver.status,
+            suspensionReason: driver.suspensionReason,
+          }),
+        ],
+      );
+
+      return this.toDriverDto(driver);
+    });
+  }
+
+  async reactivateDriver(
+    tenantId: string,
+    driverId: string,
+    actorId = 'system',
+  ): Promise<DriverResponseDto> {
+    return this.withTenantTransaction(tenantId, async (client) => {
+      const driver = await this.repository.findDriverById(driverId, client);
+      if (!driver) {
+        throw new DriverNotFoundError(driverId);
+      }
+
+      driver.reactivate();
+      await this.repository.saveDriver(driver, client);
+
+      await this.outboxRepository.append(client, {
+        eventId: randomUUID(),
+        tenantId,
+        aggregateType: 'Driver',
+        aggregateId: driver.id,
+        aggregateVersion: driver.version,
+        schemaVersion: 1,
+        occurredAt: new Date(),
+        eventType: 'DriverReactivated',
+        payload: toIntegrationPayload({
+          id: driver.id,
+        }),
+      });
+
+      await client.query(
+        `INSERT INTO audit.audit_records (
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+        [
+          tenantId,
+          'USER',
+          toUuidOrNull(actorId),
+          'DRIVER_REACTIVATED',
+          'Driver',
+          driver.id,
+          JSON.stringify({ status: driver.status }),
+        ],
+      );
+
+      return this.toDriverDto(driver);
+    });
+  }
+
+  async attachDriverDocument(
+    tenantId: string,
+    driverId: string,
+    dto: AttachDriverDocumentDto,
+    actorId = 'system',
+  ): Promise<DriverDocumentResponseDto> {
+    return this.withTenantTransaction(tenantId, async (client) => {
+      const driver = await this.repository.findDriverById(driverId, client);
+      if (!driver) {
+        throw new DriverNotFoundError(driverId);
+      }
+
+      const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : undefined;
+      const document = DriverDocument.create({
+        tenantId,
+        driverId,
+        documentType: dto.documentType,
+        documentNumber: dto.documentNumber,
+        expiresAt,
+        metadata: dto.metadata,
+      });
+
+      await this.repository.saveDriverDocument(document, client);
+
+      await this.outboxRepository.append(client, {
+        eventId: randomUUID(),
+        tenantId,
+        aggregateType: 'Driver',
+        aggregateId: driver.id,
+        aggregateVersion: driver.version,
+        schemaVersion: 1,
+        occurredAt: new Date(),
+        eventType: 'DriverDocumentAttached',
+        payload: toIntegrationPayload({
+          id: document.id,
+          driverId: document.driverId,
+          documentType: document.documentType,
+          documentNumber: document.documentNumber,
+          status: document.status,
+          expiresAt: document.expiresAt?.toISOString(),
+        }),
+      });
+
+      await client.query(
+        `INSERT INTO audit.audit_records (
+           tenant_id, actor_type, actor_id, action, resource_type, resource_id, after_state
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+        [
+          tenantId,
+          'USER',
+          toUuidOrNull(actorId),
+          'DRIVER_DOCUMENT_ATTACHED',
+          'DriverDocument',
+          document.id,
+          JSON.stringify({
+            driverId,
+            documentType: document.documentType,
+            documentNumber: document.documentNumber,
+            status: document.status,
+          }),
+        ],
+      );
+
+      return this.toDriverDocumentDto(document);
+    });
+  }
+
+  async findDriverById(tenantId: string, driverId: string): Promise<DriverResponseDto> {
+    return this.withTenantTransaction(tenantId, async (client) => {
+      const driver = await this.repository.findDriverById(driverId, client);
+      if (!driver) {
+        throw new DriverNotFoundError(driverId);
+      }
+      return this.toDriverDto(driver);
+    });
+  }
+
+  async listDrivers(
+    tenantId: string,
+    filter?: ListDriversFilter,
+  ): Promise<{ items: DriverResponseDto[]; total: number }> {
+    return this.withTenantTransaction(tenantId, async (client) => {
+      const result = await this.repository.listDrivers(filter, client);
+      return {
+        items: result.items.map((d) => this.toDriverDto(d)),
+        total: result.total,
+      };
+    });
+  }
+
+  async listDriverEligibilities(
+    tenantId: string,
+    driverId: string,
+  ): Promise<DriverEligibilityRecord[]> {
+    return this.withTenantTransaction(tenantId, async (client) => {
+      return this.repository.listDriverEligibilities(driverId, client);
+    });
+  }
+
+  private toDriverDto(driver: Driver): DriverResponseDto {
+    return {
+      id: driver.id,
+      tenantId: driver.tenantId,
+      personId: driver.personId,
+      licenseNumber: driver.licenseNumber,
+      licenseCategory: driver.licenseCategory,
+      licenseExpiresAt: driver.licenseExpiresAt.toISOString(),
+      status: driver.status,
+      suspensionReason: driver.suspensionReason,
+      version: driver.version,
+      createdAt: driver.createdAt.toISOString(),
+      updatedAt: driver.updatedAt.toISOString(),
+      documents: driver.driverDocuments.map((doc) => this.toDriverDocumentDto(doc)),
+    };
+  }
+
+  private toDriverDocumentDto(doc: DriverDocument): DriverDocumentResponseDto {
+    return {
+      id: doc.id,
+      tenantId: doc.tenantId,
+      driverId: doc.driverId,
+      documentType: doc.documentType,
+      documentNumber: doc.documentNumber,
+      expiresAt: doc.expiresAt?.toISOString(),
+      status: doc.status,
+      metadata: doc.metadata,
+      version: doc.version,
+      createdAt: doc.createdAt.toISOString(),
+      updatedAt: doc.updatedAt.toISOString(),
+    };
+  }
 }
+

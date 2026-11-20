@@ -22,15 +22,22 @@ import {
   EmployeeAlreadyExistsError,
   EmploymentNotFoundError,
   ProvisionalAuthNotFoundError,
+  DriverNotFoundError,
+  DriverPersonConflictError,
+  DriverLicenseConflictError,
   type PersonResponseDto,
   type EmployeeResponseDto,
   type CompanyEmploymentResponseDto,
   type ProvisionalAuthResponseDto,
+  type DriverResponseDto,
+  type DriverDocumentResponseDto,
 } from '../application/workforce-management.service';
 import { PersonDomainError } from '../domain/person.entity';
 import { EmployeeDomainError } from '../domain/employee.entity';
 import { CompanyEmploymentDomainError } from '../domain/company-employment.entity';
 import { ProvisionalAuthorizationDomainError } from '../domain/provisional-transport-authorization.entity';
+import { DriverDomainError } from '../domain/driver.types';
+import type { DriverEligibilityRecord } from '../domain/workforce.repository';
 
 const createPersonSchema = z.object({
   fullName: z.string().trim().min(2).max(255),
@@ -75,6 +82,36 @@ const createProvisionalAuthSchema = z.object({
 
 const revokeProvisionalAuthSchema = z.object({
   reason: z.string().trim().min(1),
+});
+
+const createDriverSchema = z.object({
+  personId: z.string().uuid(),
+  licenseNumber: z.string().trim().min(5).max(30),
+  licenseCategory: z.enum(['A', 'B', 'C', 'D', 'E', 'AB', 'AC', 'AD', 'AE']),
+  licenseExpiresAt: z.string().datetime(),
+});
+
+const updateDriverSchema = z.object({
+  licenseCategory: z.enum(['A', 'B', 'C', 'D', 'E', 'AB', 'AC', 'AD', 'AE']).optional(),
+  licenseExpiresAt: z.string().datetime().optional(),
+});
+
+const suspendDriverSchema = z.object({
+  reason: z.string().trim().min(1),
+});
+
+const attachDriverDocSchema = z.object({
+  documentType: z.string().trim().min(2).max(50),
+  documentNumber: z.string().trim().min(1).max(100),
+  expiresAt: z.string().datetime().optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+});
+
+const listDriversFilterSchema = z.object({
+  status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
+  search: z.string().trim().optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
 });
 
 @Controller('workforce')
@@ -362,5 +399,169 @@ export class WorkforceController {
   ): Promise<ProvisionalAuthResponseDto[]> {
     const tenantId = this.extractTenantId(tenantIdHeader);
     return await this.service.listProvisionalAuthorizations(tenantId, clientCompanyId);
+  }
+
+  // --- DRIVERS ---
+
+  @Post('drivers')
+  @HttpCode(HttpStatus.CREATED)
+  async createDriver(
+    @Headers('x-tenant-id') tenantIdHeader: string | undefined,
+    @Body() body: unknown,
+  ): Promise<DriverResponseDto> {
+    const tenantId = this.extractTenantId(tenantIdHeader);
+    const parsed = createDriverSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues.map((i) => i.message).join(', '));
+    }
+
+    try {
+      return await this.service.createDriver(tenantId, parsed.data);
+    } catch (err) {
+      if (err instanceof PersonNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      if (err instanceof DriverPersonConflictError || err instanceof DriverLicenseConflictError) {
+        throw new ConflictException(err.message);
+      }
+      if (err instanceof DriverDomainError) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Get('drivers')
+  async listDrivers(
+    @Headers('x-tenant-id') tenantIdHeader: string | undefined,
+    @Query() query: unknown,
+  ): Promise<{ items: DriverResponseDto[]; total: number }> {
+    const tenantId = this.extractTenantId(tenantIdHeader);
+    const parsed = listDriversFilterSchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues.map((i) => i.message).join(', '));
+    }
+
+    return await this.service.listDrivers(tenantId, parsed.data);
+  }
+
+  @Get('drivers/:id')
+  async findDriverById(
+    @Headers('x-tenant-id') tenantIdHeader: string | undefined,
+    @Param('id') id: string,
+  ): Promise<DriverResponseDto> {
+    const tenantId = this.extractTenantId(tenantIdHeader);
+    try {
+      return await this.service.findDriverById(tenantId, id);
+    } catch (err) {
+      if (err instanceof DriverNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Patch('drivers/:id')
+  async updateDriver(
+    @Headers('x-tenant-id') tenantIdHeader: string | undefined,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ): Promise<DriverResponseDto> {
+    const tenantId = this.extractTenantId(tenantIdHeader);
+    const parsed = updateDriverSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues.map((i) => i.message).join(', '));
+    }
+
+    try {
+      return await this.service.updateDriver(tenantId, id, parsed.data);
+    } catch (err) {
+      if (err instanceof DriverNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      if (err instanceof DriverDomainError) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Post('drivers/:id/suspend')
+  async suspendDriver(
+    @Headers('x-tenant-id') tenantIdHeader: string | undefined,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ): Promise<DriverResponseDto> {
+    const tenantId = this.extractTenantId(tenantIdHeader);
+    const parsed = suspendDriverSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues.map((i) => i.message).join(', '));
+    }
+
+    try {
+      return await this.service.suspendDriver(tenantId, id, parsed.data);
+    } catch (err) {
+      if (err instanceof DriverNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      if (err instanceof DriverDomainError) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Post('drivers/:id/reactivate')
+  async reactivateDriver(
+    @Headers('x-tenant-id') tenantIdHeader: string | undefined,
+    @Param('id') id: string,
+  ): Promise<DriverResponseDto> {
+    const tenantId = this.extractTenantId(tenantIdHeader);
+    try {
+      return await this.service.reactivateDriver(tenantId, id);
+    } catch (err) {
+      if (err instanceof DriverNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      if (err instanceof DriverDomainError) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Post('drivers/:id/documents')
+  @HttpCode(HttpStatus.CREATED)
+  async attachDriverDocument(
+    @Headers('x-tenant-id') tenantIdHeader: string | undefined,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ): Promise<DriverDocumentResponseDto> {
+    const tenantId = this.extractTenantId(tenantIdHeader);
+    const parsed = attachDriverDocSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.issues.map((i) => i.message).join(', '));
+    }
+
+    try {
+      return await this.service.attachDriverDocument(tenantId, id, parsed.data);
+    } catch (err) {
+      if (err instanceof DriverNotFoundError) {
+        throw new NotFoundException(err.message);
+      }
+      if (err instanceof DriverDomainError) {
+        throw new BadRequestException(err.message);
+      }
+      throw err;
+    }
+  }
+
+  @Get('drivers/:id/eligibility-history')
+  async listDriverEligibilities(
+    @Headers('x-tenant-id') tenantIdHeader: string | undefined,
+    @Param('id') id: string,
+  ): Promise<DriverEligibilityRecord[]> {
+    const tenantId = this.extractTenantId(tenantIdHeader);
+    return await this.service.listDriverEligibilities(tenantId, id);
   }
 }

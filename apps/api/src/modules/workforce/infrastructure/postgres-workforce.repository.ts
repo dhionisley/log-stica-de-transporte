@@ -26,8 +26,24 @@ import {
   type ProvisionalAuthStatus,
   type ProvisionalTransportAuthorizationProps,
 } from '../domain/provisional-transport-authorization.entity';
+import {
+  Driver,
+  type DriverProps,
+} from '../domain/driver.entity';
+import {
+  DriverDocument,
+  type DriverDocumentProps,
+} from '../domain/driver-document.entity';
+import {
+  type DriverDocumentStatus,
+  type DriverLicenseCategory,
+  type DriverStatus,
+  DriverDomainError,
+} from '../domain/driver.types';
 import type {
+  DriverEligibilityRecord,
   IWorkforceRepository,
+  ListDriversFilter,
   ListEmployeesFilter,
   ListEmploymentsFilter,
   ListPeopleFilter,
@@ -86,6 +102,45 @@ interface ProvisionalAuthRow {
   version: string | number;
   created_at: Date;
   updated_at: Date;
+}
+
+interface DriverRow {
+  id: string;
+  tenant_id: string;
+  person_id: string;
+  license_number: string;
+  license_category: DriverLicenseCategory;
+  license_expires_at: Date;
+  status: DriverStatus;
+  suspension_reason: string | null;
+  version: string | number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface DriverDocumentRow {
+  id: string;
+  tenant_id: string;
+  driver_id: string;
+  document_type: string;
+  document_number: string;
+  expires_at: Date | null;
+  status: DriverDocumentStatus;
+  metadata: Record<string, unknown> | string;
+  version: string | number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface DriverEligibilityRow {
+  id: string;
+  tenant_id: string;
+  driver_id: string;
+  evaluated_at: Date;
+  is_eligible: boolean;
+  reasons: string[] | string;
+  evaluated_by: string | null;
+  created_at: Date;
 }
 
 @Injectable()
@@ -641,5 +696,331 @@ export class PostgresWorkforceRepository implements IWorkforceRepository {
       updatedAt: row.updated_at,
     };
     return ProvisionalTransportAuthorization.reconstitute(props);
+  }
+
+  async saveDriver(driver: Driver, client?: PoolClient): Promise<void> {
+    const runner = this.getRunner(client);
+
+    const existing = await runner.query<{ version: string | number }>(
+      `SELECT version FROM workforce.drivers WHERE id = $1`,
+      [driver.id],
+    );
+
+    if (existing.rows.length === 0) {
+      await runner.query(
+        `INSERT INTO workforce.drivers (
+           id, tenant_id, person_id, license_number, license_category,
+           license_expires_at, status, suspension_reason, version, created_at, updated_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          driver.id,
+          driver.tenantId,
+          driver.personId,
+          driver.licenseNumber,
+          driver.licenseCategory,
+          driver.licenseExpiresAt,
+          driver.status,
+          driver.suspensionReason ?? null,
+          driver.version,
+          driver.createdAt,
+          driver.updatedAt,
+        ],
+      );
+    } else {
+      const updateRes = await runner.query(
+        `UPDATE workforce.drivers SET
+           license_category = $1,
+           license_expires_at = $2,
+           status = $3,
+           suspension_reason = $4,
+           version = version + 1,
+           updated_at = $5
+         WHERE id = $6 AND tenant_id = $7 AND version = $8
+         RETURNING version`,
+        [
+          driver.licenseCategory,
+          driver.licenseExpiresAt,
+          driver.status,
+          driver.suspensionReason ?? null,
+          driver.updatedAt,
+          driver.id,
+          driver.tenantId,
+          driver.version,
+        ],
+      );
+
+      if (updateRes.rowCount === 0) {
+        throw new DriverDomainError(
+          `Driver optimistic lock conflict for id ${driver.id} (version ${driver.version})`,
+        );
+      }
+    }
+  }
+
+  async findDriverById(id: string, client?: PoolClient): Promise<Driver | null> {
+    const runner = this.getRunner(client);
+    const res = await runner.query<DriverRow>(
+      `SELECT id, tenant_id, person_id, license_number, license_category,
+              license_expires_at, status, suspension_reason, version, created_at, updated_at
+       FROM workforce.drivers
+       WHERE id = $1`,
+      [id],
+    );
+
+    if (res.rows.length === 0) {
+      return null;
+    }
+
+    const docs = await this.listDriverDocuments(id, client);
+    return this.mapToDriver(res.rows[0], docs);
+  }
+
+  async findDriverByPersonId(personId: string, client?: PoolClient): Promise<Driver | null> {
+    const runner = this.getRunner(client);
+    const res = await runner.query<DriverRow>(
+      `SELECT id, tenant_id, person_id, license_number, license_category,
+              license_expires_at, status, suspension_reason, version, created_at, updated_at
+       FROM workforce.drivers
+       WHERE person_id = $1`,
+      [personId],
+    );
+
+    if (res.rows.length === 0) {
+      return null;
+    }
+
+    const docs = await this.listDriverDocuments(res.rows[0].id, client);
+    return this.mapToDriver(res.rows[0], docs);
+  }
+
+  async findDriverByLicenseNumber(licenseNumber: string, client?: PoolClient): Promise<Driver | null> {
+    const runner = this.getRunner(client);
+    const res = await runner.query<DriverRow>(
+      `SELECT id, tenant_id, person_id, license_number, license_category,
+              license_expires_at, status, suspension_reason, version, created_at, updated_at
+       FROM workforce.drivers
+       WHERE license_number = $1`,
+      [licenseNumber],
+    );
+
+    if (res.rows.length === 0) {
+      return null;
+    }
+
+    const docs = await this.listDriverDocuments(res.rows[0].id, client);
+    return this.mapToDriver(res.rows[0], docs);
+  }
+
+  async listDrivers(
+    filter?: ListDriversFilter,
+    client?: PoolClient,
+  ): Promise<{ items: Driver[]; total: number }> {
+    const runner = this.getRunner(client);
+    const conditions: string[] = [];
+    const values: unknown[] = [];
+    let idx = 1;
+
+    if (filter?.status) {
+      conditions.push(`status = $${idx++}`);
+      values.push(filter.status);
+    }
+
+    if (filter?.search) {
+      conditions.push(`license_number ILIKE $${idx}`);
+      values.push(`%${filter.search}%`);
+      idx++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await runner.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM workforce.drivers ${whereClause}`,
+      values,
+    );
+    const total = Number.parseInt(countRes.rows[0]?.count ?? '0', 10);
+
+    const limit = filter?.limit ?? 50;
+    const offset = filter?.offset ?? 0;
+
+    const query = `
+      SELECT id, tenant_id, person_id, license_number, license_category,
+             license_expires_at, status, suspension_reason, version, created_at, updated_at
+      FROM workforce.drivers
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $${idx++} OFFSET $${idx++}
+    `;
+
+    values.push(limit, offset);
+    const rowsRes = await runner.query<DriverRow>(query, values);
+    const items = rowsRes.rows.map((row) => this.mapToDriver(row, []));
+
+    return { items, total };
+  }
+
+  async saveDriverDocument(document: DriverDocument, client?: PoolClient): Promise<void> {
+    const runner = this.getRunner(client);
+
+    const existing = await runner.query<{ version: string | number }>(
+      `SELECT version FROM workforce.driver_documents WHERE id = $1`,
+      [document.id],
+    );
+
+    if (existing.rows.length === 0) {
+      await runner.query(
+        `INSERT INTO workforce.driver_documents (
+           id, tenant_id, driver_id, document_type, document_number,
+           expires_at, status, metadata, version, created_at, updated_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11)`,
+        [
+          document.id,
+          document.tenantId,
+          document.driverId,
+          document.documentType,
+          document.documentNumber,
+          document.expiresAt ?? null,
+          document.status,
+          JSON.stringify(document.metadata),
+          document.version,
+          document.createdAt,
+          document.updatedAt,
+        ],
+      );
+    } else {
+      await runner.query(
+        `UPDATE workforce.driver_documents SET
+           document_type = $1,
+           document_number = $2,
+           expires_at = $3,
+           status = $4,
+           metadata = $5::jsonb,
+           version = version + 1,
+           updated_at = $6
+         WHERE id = $7 AND tenant_id = $8`,
+        [
+          document.documentType,
+          document.documentNumber,
+          document.expiresAt ?? null,
+          document.status,
+          JSON.stringify(document.metadata),
+          document.updatedAt,
+          document.id,
+          document.tenantId,
+        ],
+      );
+    }
+  }
+
+  async findDriverDocumentById(id: string, client?: PoolClient): Promise<DriverDocument | null> {
+    const runner = this.getRunner(client);
+    const res = await runner.query<DriverDocumentRow>(
+      `SELECT id, tenant_id, driver_id, document_type, document_number,
+              expires_at, status, metadata, version, created_at, updated_at
+       FROM workforce.driver_documents
+       WHERE id = $1`,
+      [id],
+    );
+
+    if (res.rows.length === 0) {
+      return null;
+    }
+
+    return this.mapToDriverDoc(res.rows[0]);
+  }
+
+  async listDriverDocuments(driverId: string, client?: PoolClient): Promise<DriverDocument[]> {
+    const runner = this.getRunner(client);
+    const res = await runner.query<DriverDocumentRow>(
+      `SELECT id, tenant_id, driver_id, document_type, document_number,
+              expires_at, status, metadata, version, created_at, updated_at
+       FROM workforce.driver_documents
+       WHERE driver_id = $1
+       ORDER BY created_at ASC`,
+      [driverId],
+    );
+
+    return res.rows.map((row) => this.mapToDriverDoc(row));
+  }
+
+  async saveDriverEligibility(
+    record: Omit<DriverEligibilityRecord, 'id' | 'createdAt'> & { id?: string },
+    client?: PoolClient,
+  ): Promise<void> {
+    const runner = this.getRunner(client);
+    await runner.query(
+      `INSERT INTO workforce.driver_eligibilities (
+         id, tenant_id, driver_id, evaluated_at, is_eligible, reasons, evaluated_by, created_at
+       ) VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6::jsonb, $7, now())`,
+      [
+        record.id ?? null,
+        record.tenantId,
+        record.driverId,
+        record.evaluatedAt,
+        record.isEligible,
+        JSON.stringify(record.reasons),
+        record.evaluatedBy ?? null,
+      ],
+    );
+  }
+
+  async listDriverEligibilities(driverId: string, client?: PoolClient): Promise<DriverEligibilityRecord[]> {
+    const runner = this.getRunner(client);
+    const res = await runner.query<DriverEligibilityRow>(
+      `SELECT id, tenant_id, driver_id, evaluated_at, is_eligible, reasons, evaluated_by, created_at
+       FROM workforce.driver_eligibilities
+       WHERE driver_id = $1
+       ORDER BY evaluated_at DESC`,
+      [driverId],
+    );
+
+    return res.rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenant_id,
+      driverId: row.driver_id,
+      evaluatedAt: new Date(row.evaluated_at),
+      isEligible: row.is_eligible,
+      reasons: typeof row.reasons === 'string' ? JSON.parse(row.reasons) : (row.reasons ?? []),
+      evaluatedBy: row.evaluated_by ?? undefined,
+      createdAt: new Date(row.created_at),
+    }));
+  }
+
+  private mapToDriver(row: DriverRow, docs: DriverDocument[]): Driver {
+    const props: DriverProps = {
+      id: row.id,
+      tenantId: row.tenant_id,
+      personId: row.person_id,
+      licenseNumber: row.license_number,
+      licenseCategory: row.license_category,
+      licenseExpiresAt: new Date(row.license_expires_at),
+      status: row.status,
+      suspensionReason: row.suspension_reason ?? undefined,
+      version: Number(row.version),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    };
+    return Driver.reconstitute(props, docs);
+  }
+
+  private mapToDriverDoc(row: DriverDocumentRow): DriverDocument {
+    const metadata =
+      typeof row.metadata === 'string'
+        ? JSON.parse(row.metadata)
+        : (row.metadata ?? {});
+
+    const props: DriverDocumentProps = {
+      id: row.id,
+      tenantId: row.tenant_id,
+      driverId: row.driver_id,
+      documentType: row.document_type,
+      documentNumber: row.document_number,
+      expiresAt: row.expires_at ? new Date(row.expires_at) : undefined,
+      status: row.status,
+      metadata,
+      version: Number(row.version),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    };
+    return DriverDocument.reconstitute(props);
   }
 }

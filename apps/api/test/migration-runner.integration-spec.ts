@@ -114,6 +114,16 @@ describe('MigrationRunner Integration', () => {
     expect(workforceTableNames).toContain('employees');
     expect(workforceTableNames).toContain('company_employments');
     expect(workforceTableNames).toContain('provisional_transport_authorizations');
+    expect(workforceTableNames).toContain('drivers');
+    expect(workforceTableNames).toContain('driver_documents');
+    expect(workforceTableNames).toContain('driver_eligibilities');
+
+    const fleetTablesRes = await testPool.query<{ table_name: string }>(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema = 'fleet'`,
+    );
+    const fleetTableNames = fleetTablesRes.rows.map((r) => r.table_name);
+    expect(fleetTableNames).toContain('vehicles');
+    expect(fleetTableNames).toContain('vehicle_documents');
   });
 
   it('is idempotent and applies nothing on re-execution', async () => {
