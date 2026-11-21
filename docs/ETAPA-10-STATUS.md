@@ -199,3 +199,17 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - 13 suítes e 101 testes unitários locais aprovados (+16 novos testes em workforce.spec.ts) e suíte completa de integração PostgreSQL em workforce.integration-spec.ts;
 - build:api, build:web, lint:api e lint:web validados com 0 erros;
 - CI remoto verificado em 2026-11-19 no GitHub Actions (commit 983fa26, Run 29 / Run ID 44611840495): quality (lint:api, lint:web, build:api, build:web, 101 testes unitarios), integration (runner de migrations com 0001 a 0007 em banco limpo, 8 suítes de testes de integração) e security (SCA, gitleaks, CodeQL) todos aprovados (success).
+
+## Fleet Vehicles, Drivers & Eligibility Gate (M2 Incremento 3)
+
+- migration 0008_fleet_and_driver_eligibility.sql adicionada com schemas fleet e workforce, implementando tabelas fleet.vehicles, fleet.vehicle_documents, workforce.drivers, workforce.driver_documents e workforce.driver_eligibilities com RLS estrito e chaves compostas tenant-aware;
+- recomendação V1 da Seção 28 do Modelo de Dados cumprida: tabelas físicas separadas para documentos de veículos e motoristas em vez de tabelas polimórficas, garantindo integridade referencial forte;
+- agregado Vehicle com placa normalizada única por tenant (plate_normalized), categorias (CAR, VAN, MINIBUS, BUS), capacidade física de assentos, recursos de acessibilidade e ciclo de vida operacional (AVAILABLE, IN_MAINTENANCE, OUT_OF_SERVICE);
+- agregado Driver qualificado a partir de Person, com controle de número e categoria de CNH (A, B, C, D, E e combinações), validade da habilitação e ciclo de vida (ACTIVE, INACTIVE, SUSPENDED com motivo auditado);
+- motor de domínio EligibilityService com matriz estrita de compatibilidade de CNH versus classe de veículo, verificação de expiração temporal de CNH e documentos regulatórios (CRLV, seguro, toxicológico), e bloqueio categorizado de recursos inaptos (gate mandatório de inelegibilidade do M2);
+- PostgresVehicleRepository e expansão de PostgresWorkforceRepository com concorrência otimista (version), publicação confiável no Transactional Outbox (VehicleCreated, VehicleUpdated, VehicleOperationalStatusChanged, VehicleDocumentAttached, DriverCreated, DriverUpdated, DriverSuspended, DriverReactivated, DriverDocumentAttached) e auditoria append-only em audit.audit_records;
+- FleetModule e controllers REST VehicleController e rotas em WorkforceController expondo endpoints validados com Zod;
+- 15 suítes e 118 testes unitários locais aprovados (+17 novos testes em fleet.spec.ts e driver.spec.ts) e suíte de integração PostgreSQL em fleet.integration-spec.ts;
+- build:api, build:web, lint:api e lint:web validados com 0 erros;
+- CI remoto verificado em 2026-11-21 no GitHub Actions (commit ed48c35): quality (lint:api, lint:web, build:api, build:web, 118 testes unitários), integration (runner de migrations com 0001 a 0008 em banco limpo, 9 suítes de testes de integração) e security (SCA com pnpm audit zero falhas, gitleaks, CodeQL) todos aprovados (success).
+
