@@ -213,3 +213,18 @@ Esses itens são os próximos incrementos de M0/M1; não devem ser considerados 
 - build:api, build:web, lint:api e lint:web validados com 0 erros;
 - CI remoto verificado em 2026-11-21 no GitHub Actions (commit ed48c35): quality (lint:api, lint:web, build:api, build:web, 118 testes unitários), integration (runner de migrations com 0001 a 0008 em banco limpo, 9 suítes de testes de integração) e security (SCA com pnpm audit zero falhas, gitleaks, CodeQL) todos aprovados (success).
 
+## Operational Locations & Geofences (M2 Incremento 4 — Fechamento do Milestone M2)
+
+- migration 0009_service_locations_and_geofences.sql adicionada com schema service e tabela service.service_locations com suporte espacial nativo PostGIS (geography(Point, 4326) e geography(Polygon, 4326)), RLS estrito e chaves compostas tenant-aware;
+- índices espaciais GIST em point e geofence para alta performance em buscas de proximidade (ST_DWithin) e contenção;
+- agregado ServiceLocation com Value Objects GeoPoint (validação rigorosa de coordenadas WGS 84: latitude [-90, 90], longitude [-180, 180]) e GeofencePolygon (anéis fechados com pelo menos 4 vértices);
+- tipos de locais suportados (CLIENT_SITE, OPERATIONAL_BASE, STOP_POINT, PASSENGER_PICKUP) com vínculo opcional a empresas clientes (client_company_id) isolado por tenant;
+- algoritmo espacial de avaliação de presença em geofence híbrido (ray-casting para polígonos, distância geodésica Haversine para raios circulares);
+- PostgresLocationRepository e LocationManagementService orquestrando persistência com concorrência otimista (version), publicação atômica no Transactional Outbox (LocationCreated, LocationUpdated, LocationGeofenceUpdated) e auditoria imutável em audit.audit_records;
+- LocationModule e LocationController expondo endpoints REST validados com Zod (/locations, /locations/nearby, /locations/:id, /locations/:id/geofence, /locations/:id/evaluate-point);
+- 16 suítes e 127 testes unitários locais aprovados (+9 novos testes em locations.spec.ts) e suíte completa de integração PostgreSQL com PostGIS em locations.integration-spec.ts;
+- build:api, build:web, lint:api e lint:web validados com 0 erros;
+- CI remoto verificado em 2026-11-21 no GitHub Actions (commit a0baa99): quality (lint:api, lint:web, build:api, build:web, 127 testes unitários), integration (runner de migrations com 0001 a 0009 em banco limpo, 10 suítes de testes de integração) e security (SCA com pnpm audit zero falhas, gitleaks, CodeQL) todos aprovados com 100% de sucesso;
+- Milestone M2 (Operational Master Data) 100% concluído e arquivado.
+
+
