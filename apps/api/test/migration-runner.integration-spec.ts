@@ -124,6 +124,12 @@ describe('MigrationRunner Integration', () => {
     const fleetTableNames = fleetTablesRes.rows.map((r) => r.table_name);
     expect(fleetTableNames).toContain('vehicles');
     expect(fleetTableNames).toContain('vehicle_documents');
+
+    const serviceTablesRes = await testPool.query<{ table_name: string }>(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema = 'service'`,
+    );
+    const serviceTableNames = serviceTablesRes.rows.map((r) => r.table_name);
+    expect(serviceTableNames).toContain('service_locations');
   });
 
   it('is idempotent and applies nothing on re-execution', async () => {

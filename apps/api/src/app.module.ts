@@ -8,6 +8,7 @@ import { IamModule } from './modules/iam/iam.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { WorkforceModule } from './modules/workforce/workforce.module';
 import { FleetModule } from './modules/fleet/fleet.module';
+import { LocationModule } from './modules/locations/location.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
 
@@ -21,6 +22,7 @@ import { OutboxModule } from './modules/outbox/outbox.module';
     ClientsModule,
     WorkforceModule,
     FleetModule,
+    LocationModule,
     AuditModule,
     OutboxModule,
   ],
